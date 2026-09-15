@@ -17,15 +17,22 @@ For schema, invariants, entitlement model, and testing approach, see docs/PRD.md
 
 ## UI & Styling Workflow
 
-- **Google Stitch First:** Before building ANY UI, you MUST use `stitch_*` tools to find the target screen in Project ID `projects/12955454536127255680`. `webfetch` its HTML and use that exact DOM/layout as your strict reference.
-- **Component Strategy:** We use Shadcn UI as the accessible primitive foundation for all interactive elements.
-- **Execution Order:** When tasked with building UI, you must FIRST add the raw Shadcn component via CLI (`pnpm dlx shadcn@latest add <component>`) into `components/ui/`.
-- **Refinement:** SECOND, you must immediately modify the generated Shadcn component file to strip out its default Tailwind styles and replace them with the explicit editorial utility classes, custom radii (`rounded-buttons`, `rounded-cards`, `rounded-images`, `rounded-inputs`), and spacing defined in `docs/DESIGN.md`. Do not leave default Shadcn visual styles intact.
+- **Mobile-first:** Design and build every screen mobile-first. Start with the
+  unprefixed (mobile) Tailwind classes as the base styles, then layer in `md:`
+  (tablet) and `lg:` (desktop) variants for progressive enhancement — never the
+  reverse (do not design desktop-first and retrofit smaller breakpoints with
+  overrides). See `docs/DESIGN.md` for per-breakpoint layout specs (grid column
+  counts, sidebar collapse behavior, nav treatment) for each page.
+- **Full-Spectrum Shadcn Component Architecture:** Cursusaurus utilizes the **entire Shadcn UI component library**. Never write custom HTML or makeshift CSS for any pattern covered by Shadcn (modals, dropdowns, tabs, accordions, avatars, separators, skeletons, toasts, tooltips, dialogs, drawers, etc.).
+- **Google Stitch as Visual Reference (NEVER Raw HTML):** Before building ANY UI, you MUST use `stitch_*` tools to find the target screen in Project ID `projects/12955454536127255680` and examine its HTML. However, **NEVER copy Stitch's raw HTML tags verbatim**. Stitch outputs un-abstracted `<button>`, `<div>`, and `<input>` tags. You must translate Stitch's visual hierarchy into our project's Shadcn primitives.
+- **On-Demand Component Acquisition:** Whenever a screen needs a component not yet in `components/ui/`, install it (`pnpm dlx shadcn@latest add <component>`), restyle it to match `docs/DESIGN.md` editorial tokens (custom radii, ink/paper/mist/slate palette), then compose it in the feature.
 - **Access-state color discipline:** Blush Peach (`--color-blush-peach`) is reserved for access-state signaling only (All-Access badges, locked-content overlays, the featured pricing tier) per `docs/DESIGN.md`. Do not use it as a decorative accent elsewhere.
+- **Pre-Completion UI Audit:** Before marking any UI task complete or creating a commit, run `git diff` on modified pages and inspect for native `<button>`, `<input>`, or un-abstracted container tags outside `components/ui/`. If any exist where a Shadcn primitive applies, refactor them immediately.
 
 ## Planning Workflow
 
 - **Plan Visibility:** Whenever an Implementation Plan is created (e.g. during a `/plan` execution) in the agent's brain directory, you MUST duplicate it into the `.plans/` directory in the project root so it's easily accessible in the workspace.
+- **Component Fidelity in Plans:** Code blocks in `.plans/*.md` must explicitly use Shadcn primitives (`<Button>`, `<Card>`, `<Input>`, `<Badge>`, etc.), NEVER raw HTML tags. If an existing or resumed plan contains raw HTML tags, the executing agent is required to upgrade them to Shadcn primitives rather than copying them blindly.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

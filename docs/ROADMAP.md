@@ -17,20 +17,20 @@ Ordered by risk, not by ease — the entitlement/payment core comes before any U
 - [x] Google Stitch project created for Cursusaurus; Project ID filled into `AGENTS.md` (currently a placeholder)
 - [x] Initial shadcn primitives installed: `button`, `card`, `badge`, `input`, `progress`
 - [x] Primitives above restyled per `DESIGN.md` component specs (pill radius, ink-black/peach, `font-sohne`)
-- [ ] `features/` directory scaffolded per `ARCHITECTURE.md` §1 (`entitlements/`, `purchases/`, `subscriptions/`, `courses/`, `video/`, `progress/`)
-- [ ] `globals.css` `:root` consolidated — map shadcn semantic variables (`--primary`, `--background`, etc.) to editorial tokens, remove redundant oklch defaults
+- [x] `features/` directory scaffolded per `ARCHITECTURE.md` §1 (`entitlements/`, `purchases/`, `subscriptions/`, `courses/`, `video/`, `progress/`)
+- [x] `globals.css` `:root` consolidated — map shadcn semantic variables (`--primary`, `--background`, etc.) to editorial tokens, remove redundant oklch defaults
 
 ---
 
 ## Phase 1 — Entitlement Core _(Milestone 0 — no UI, no Stripe yet)_
 
-- [ ] `(auth)` route group — login/register pages wired to Better-Auth (prerequisite for all auth-gated work)
-- [ ] Generate and apply Drizzle Kit migration for `entitlements`, `courses`, `purchases`, `subscriptions` (schema already defined in `db/schema.ts`)
-- [ ] `tests/helpers/` scaffolded — shared fixtures, DB seeding utility, auth helpers per `ARCHITECTURE.md` §1
-- [ ] `hasAccess(userId, courseId)` implemented — reads only from `entitlements`, per invariant #1
-- [ ] Seed script: fixture users/courses/entitlements for local dev
-- [ ] Full `hasAccess()` test matrix (Vitest): purchase-only, subscription-only (`active`), subscription (`trialing`), both simultaneously, canceled-with-both-present, `past_due`, refunded
-- [ ] **Gate:** all entitlement tests green before any Stripe integration begins
+- [x] `(auth)` route group — login/register pages wired to Better-Auth (prerequisite for all auth-gated work)
+- [x] Generate and apply Drizzle Kit migration for `entitlements`, `courses`, `purchases`, `subscriptions` (schema already defined in `db/schema.ts`)
+- [x] `tests/helpers/` scaffolded — shared fixtures, DB seeding utility, auth helpers per `ARCHITECTURE.md` §1
+- [x] `hasAccess(userId, courseId)` implemented — reads only from `entitlements`, per invariant #1
+- [x] Seed script: fixture users/courses/entitlements for local dev
+- [x] Full `hasAccess()` test matrix (Vitest): purchase-only, subscription-only (`active`), subscription (`trialing`), both simultaneously, canceled-with-both-present, `past_due`, refunded
+- [x] **Gate:** all entitlement tests green before any Stripe integration begins
 
 ---
 

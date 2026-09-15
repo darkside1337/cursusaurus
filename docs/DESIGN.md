@@ -162,6 +162,47 @@ Imagery is course-first: every course has a 16:9 cover thumbnail, real content (
 
 Page model is max-width 1200px centered. Catalog page: hero search/heading in Signifier at 64px, followed by a filterable grid of Course Cards (3-column desktop, 24px gaps, no shadow at rest). Course detail page: two-column layout — video player + lesson outline on the left (or top on mobile), sticky pricing/access card on the right showing both purchase paths (one-time price, All-Access CTA) using the Pricing Tier Card component. Library page: a simple grid of owned/subscribed Course Cards with progress bars, no pricing chrome. Sections alternate Paper White and Fog White backgrounds for quiet rhythm, consistent with the source system's restraint — no strong section dividers, no colored bands beyond the occasional peach card.
 
+## Responsive Behavior
+
+All layout specs elsewhere in this document — the 3-column Course Card grid, the two-column course detail layout, the fixed-width sidebar in the lesson player — describe the **desktop (lg, ≥ 1024px) state**. Design and build always starts from the unprefixed mobile base styles and layers `md:` and `lg:` modifiers on top. Never design desktop-first and retrofit smaller viewports with overrides.
+
+Tailwind breakpoints in use:
+
+| Breakpoint | Min-width | Use |
+| ---------- | --------- | --- |
+| base | — | Mobile default; all unprefixed classes apply here |
+| sm | 640px | Not used for structural layout changes in this system |
+| md | 768px | Tablet — full horizontal nav returns, grid expands to 2 columns |
+| lg | 1024px | Desktop — 3-column grids, two-column detail pages, `max-w-page` container activates |
+
+### Navigation
+
+| Viewport | Behavior |
+| -------- | -------- |
+| Mobile (base, < 768px) | Logo + hamburger icon only. Nav links and auth CTAs (Sign in, Get All-Access) collapse into a slide-out or dropdown panel triggered by the hamburger. |
+| Tablet (md, ≥ 768px) | Full horizontal nav returns: logo left, links center, auth CTAs right. |
+| Desktop (lg, ≥ 1024px) | Same as tablet, with more horizontal breathing room as the `max-w-page` (1200px) container activates. |
+
+### Per-page layout changes
+
+**Catalog** — 1-column Course Card grid on mobile, 2-column at `md`, 3-column at `lg` (matching the desktop spec in Layout above). Category filter pills scroll horizontally without wrapping on mobile rather than reflowing across multiple rows; at `md` they may wrap naturally.
+
+**Course detail** — Single column on mobile: full-width video player at top, then course title and lesson outline below, then the Pricing Tier Card stacked at the bottom (not sticky). At `lg` this becomes the two-column layout already described in Layout — main content left, sticky Pricing Tier Card pinned to the right column.
+
+**Sign in** — Single centered card at all breakpoints. Horizontal padding tightens on mobile; no structural change is needed at `md` or `lg`.
+
+**Library** — Same grid collapse as Catalog: 1 column on mobile, 2 at `md`, 3 at `lg`. Course Cards show progress bars beneath thumbnails identically across all widths.
+
+**Lesson player** — On mobile the lesson-outline collapses into a top accordion or drawer the learner taps to expand, with the video player taking full width above it. At `lg` this becomes the fixed-width sidebar already described in Layout, sitting to the right of the player.
+
+**Billing** — Single column at all breakpoints (the page is already low-density). Reduce `max-width` and horizontal padding on mobile; no structural change at `md` or `lg`.
+
+**Checkout success** — Centered confirmation card at all breakpoints; no structural change needed.
+
+**Dashboard — course list** — Same grid collapse as Catalog and Library (1 → 2 → 3 columns).
+
+**Dashboard — create/edit course** — Single column at all breakpoints (already single-column by design); just reduce padding on mobile. On the edit page, each lesson row shows its drag-handle, title, duration, and action buttons in a single horizontal row at `md`/`lg`. On mobile those elements stack vertically within the row so touch targets remain comfortable.
+
 ## Quick Start
 
 ### Tailwind v4 (`@theme` — single source, goes directly in `globals.css`)

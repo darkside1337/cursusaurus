@@ -45,8 +45,8 @@ Cursusaurus/
 │   ├── stripe.ts                   # Stripe SDK instance
 │   └── auth.ts                     # Better-Auth instance
 ├── db/
-│   ├── schema.ts                   # Drizzle schema (single source of truth)
-│   └── migrations/                 # Drizzle Kit generated SQL migrations
+│   └── schema.ts                   # Drizzle schema (single source of truth)
+├── drizzle/                        # Drizzle Kit generated SQL migrations
 ├── tests/                          # Route Handler + unit tests (Vitest — see §9)
 │   ├── helpers/                    # Shared fixtures, DB seeding, auth helpers
 │   ├── webhooks/stripe.test.ts
