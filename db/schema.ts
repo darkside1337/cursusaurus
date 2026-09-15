@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, index } from "drizzle-orm/pg-core";
 import { user } from "@/lib/db/schema/auth-schema";
 
 export * from "@/lib/db/schema/auth-schema";
@@ -48,16 +48,22 @@ export const subscriptions = pgTable("subscriptions", {
     .notNull(),
 });
 
-export const entitlements = pgTable("entitlements", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  courseId: text("course_id").references(() => courses.id),
-  source: text("source").notNull(),
-  grantedAt: timestamp("granted_at").defaultNow().notNull(),
-  revokedAt: timestamp("revoked_at"),
-});
+export const entitlements = pgTable(
+  "entitlements",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    courseId: text("course_id").references(() => courses.id),
+    source: text("source").notNull(),
+    grantedAt: timestamp("granted_at").defaultNow().notNull(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => [
+    index("entitlements_user_active_idx").on(table.userId, table.revokedAt),
+  ]
+);
 
 export const lessonProgress = pgTable("lesson_progress", {
   id: text("id").primaryKey(),

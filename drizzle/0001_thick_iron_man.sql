@@ -1,0 +1,1 @@
+CREATE INDEX "entitlements_user_active_idx" ON "entitlements" USING btree ("user_id","revoked_at");
