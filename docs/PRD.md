@@ -85,14 +85,17 @@ Entitlement   — id, user_id, course_id (nullable = all-access), source, grante
 | Refund policy                            | Fixed window (e.g. 14-day money-back) | Refund event revokes the purchase-sourced `Entitlement`; exact window (14 vs 30 days) still to be finalized                                                                                                                                                |
 | Failed subscription payment (`past_due`) | Revoke immediately                    | No grace period — sub-sourced entitlements are revoked as soon as Stripe reports `past_due`. Simpler logic, but means a single failed card charge cuts access instantly; revisit if churn/support load becomes an issue                                    |
 | Video hosting                            | Supabase Storage, signed URLs         | Pairs with Supabase auth/DB if used elsewhere in the stack; no transcoding/adaptive bitrate in v1 — files served as-is behind short-lived signed URLs gated by `hasAccess()`. Swappable for Mux/Cloudflare Stream later without touching entitlement logic |
+| Per-course pricing range                 | $19–$199, creator-set within range    | Enforced server-side in course create/edit Server Action; revisit ceiling if premium/bundle courses are added                                                                              |
+| Trial period                             | 7-day free trial on All-Access        | Subscription starts in `trialing` status; `hasAccess()` treats `trialing` as access-granting, same as `active`                                                                             |
+| Refund + progress data                   | Access revoked, progress retained     | `lesson_progress` rows are never deleted on refund — learner can re-purchase and resume                                                                                                    |
 
 ## 9. Open questions
 
-- Exact refund window: 14 days or 30 days?
+- ~~Exact refund window: 14 days or 30 days?~~ → **TBD** (still open — not yet enforced in code)
 - All-Access subscription price point?
-- Per-course pricing range/model (fixed vs. creator-set)?
-- Does a refund on a one-time purchase claw back any progress data, or just access?
-- Trial period for All-Access subscription — yes/no, and length?
+- ~~Per-course pricing range/model (fixed vs. creator-set)?~~ → **Resolved**: $19–$199, creator-set (see §8)
+- ~~Does a refund on a one-time purchase claw back any progress data, or just access?~~ → **Resolved**: access only; progress retained (see §8)
+- ~~Trial period for All-Access subscription — yes/no, and length?~~ → **Resolved**: 7-day free trial (see §8)
 
 ---
 

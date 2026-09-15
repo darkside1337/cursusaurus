@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
-import { user } from "@/lib/db/schema/auth";
+import { user } from "@/lib/db/schema/auth-schema";
 
-export * from "@/lib/db/schema/auth";
+export * from "@/lib/db/schema/auth-schema";
 
 export const courses = pgTable("courses", {
   id: text("id").primaryKey(),
@@ -73,4 +73,11 @@ export const lessonProgress = pgTable("lesson_progress", {
   updatedAt: timestamp("updated_at")
     .$onUpdate(() => new Date())
     .notNull(),
+});
+
+export const processedStripeEvents = pgTable("processed_stripe_events", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
 });

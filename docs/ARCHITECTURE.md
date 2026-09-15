@@ -29,8 +29,7 @@ Cursusaurus/
 │   └── api/                        # Route Handlers only — all external API surface
 │       ├── webhooks/stripe/route.ts
 │       ├── order-status/[sessionId]/route.ts
-│       ├── video/signed-url/route.ts
-│       └── progress/route.ts
+│       └── video/signed-url/route.ts
 ├── features/                       # Domain logic — one folder per bounded context
 │   ├── courses/                    # Course CRUD, slug generation, publish state
 │   ├── purchases/                  # One-time Checkout session creation
@@ -125,6 +124,7 @@ Object storage for video files only — not used for DB or auth in this project.
 
 - All domain state: courses, purchases, subscriptions, entitlements, lesson progress
 - Better-Auth session/account tables
+- `processed_stripe_events` — webhook idempotency (unique event ID per Stripe delivery)
 - `purchases` and `subscriptions` are payment-state records; **`entitlements` is the only table read for access decisions** (see §6)
 
 ### Supabase Storage
@@ -155,7 +155,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 4. **Canceling or lapsing a subscription revokes only subscription-sourced entitlements.** A purchase-sourced entitlement for the same course is never touched by a subscription webhook.
 5. **`trialing` and `active` subscription status both grant the entitlement; `past_due`, `canceled`, and `unpaid` revoke it immediately** (no grace period — see PRD §8).
 6. **A refund revokes the purchase-sourced entitlement only.** `lesson_progress` rows are never deleted on refund.
-7. **Webhook handlers are idempotent** — unique constraint on `stripe_event_id` makes duplicate deliveries no-ops.
+7. **Webhook handlers are idempotent** — each handler inserts into `processed_stripe_events` (unique constraint on `event_id`) within the same transaction; duplicate deliveries become no-ops.
 8. **`purchases`/`subscriptions` + `entitlements` are written in a single Postgres transaction** in the relevant webhook handler.
 9. **Video signed URLs are only issued server-side, after `hasAccess()` returns true.** No client ever receives a storage path or long-lived URL.
 
@@ -187,8 +187,9 @@ These are architectural constraints, not just conventions. Violating them breaks
 ### Subscription cancellation
 
 1. Learner cancels via Stripe Customer Portal
-2. Stripe delivers `customer.subscription.deleted` (or `updated` with `cancel_at_period_end`) → handler revokes all-access `entitlements` at the appropriate point
-3. Any course with a separate purchase-sourced entitlement remains accessible — untouched by this webhook
+2. Stripe delivers `customer.subscription.updated` with `cancel_at_period_end = true` — entitlement remains active (no change)
+3. At period end, Stripe delivers `customer.subscription.deleted` → handler revokes all-access `entitlements`
+4. Any course with a separate purchase-sourced entitlement remains accessible — untouched by this webhook
 
 ---
 
@@ -225,7 +226,8 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 | Term                   | Definition                                                                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entitlement            | A row in `entitlements` granting access; `course_id = null` means all-access, otherwise course-scoped                                                                      |
+| Entitlement            | A row in `entitlements` granting access; `course_id = null` means all-access, otherwise                                                                                    |
+| course-scoped          |
 | All-access entitlement | Subscription-sourced entitlement with `course_id = null`, covers every published course including future ones                                                              |
 | Signed playback URL    | Time-limited (60s), signed Supabase Storage URL for video GET, issued only after `hasAccess()` passes                                                                      |
 | Webhook fulfillment    | The pattern where Stripe webhook events — not the success redirect or client state — are the authoritative write path for `purchases`, `subscriptions`, and `entitlements` |
