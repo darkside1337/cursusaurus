@@ -267,7 +267,7 @@ describe("Chunk 2.4 — Public Catalog Experience", () => {
       );
 
       expect(html).toContain("All-Access");
-      expect(html).toContain("Included with Pass");
+      expect(html).toContain("Included");
     });
 
     it("displays Purchased badge and 'Enrolled' when accessState is 'purchased'", () => {

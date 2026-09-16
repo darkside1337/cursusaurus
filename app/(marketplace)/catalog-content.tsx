@@ -94,11 +94,27 @@ export function CatalogContent({
 }: CatalogContentProps) {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortMode, setSortMode] = useState<"recent" | "curated">("recent");
 
   const filteredCourses = useMemo(
     () => filterCatalogCourses(courses, activeCategory, searchQuery),
     [courses, activeCategory, searchQuery]
   );
+
+  const visibleCourses = useMemo(() => {
+    const list = [...filteredCourses];
+    if (sortMode === "recent") {
+      list.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else {
+      list.sort(
+        (a, b) =>
+          b.lessonCount - a.lessonCount || a.title.localeCompare(b.title)
+      );
+    }
+    return list;
+  }, [filteredCourses, sortMode]);
 
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-14 flex flex-col gap-10 md:gap-14">
@@ -212,11 +228,54 @@ export function CatalogContent({
 
       {/* Course Grid / Empty States */}
       <section aria-label="Course catalog grid">
+        {/* Result count & sort row */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-caption text-slate-gray font-medium font-sohne">
+              Showing {filteredCourses.length}{" "}
+              {filteredCourses.length === 1 ? "course" : "courses"}
+            </span>
+            <span className="inline-block size-1.5 rounded-full bg-mist-gray" />
+            <span className="text-caption text-ash-gray font-sohne">
+              Volume 2026
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-4 text-caption font-sohne">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setSortMode("recent")}
+              className={`h-auto p-0 text-caption transition-colors ${
+                sortMode === "recent"
+                  ? "text-ink-black font-medium"
+                  : "text-ash-gray hover:text-ink-black"
+              }`}
+            >
+              Recent releases
+            </Button>
+            <span className="text-ash-gray" aria-hidden>
+              ·
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setSortMode("curated")}
+              className={`h-auto p-0 text-caption transition-colors ${
+                sortMode === "curated"
+                  ? "text-ink-black font-medium"
+                  : "text-ash-gray hover:text-ink-black"
+              }`}
+            >
+              Curator&rsquo;s picks
+            </Button>
+          </div>
+        </div>
+
         {isLoading ? (
           <CatalogGridSkeleton />
         ) : filteredCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {filteredCourses.map((course) => {
+            {visibleCourses.map((course) => {
               const access =
                 userAccessMap[course.id] ||
                 (hasAllAccessSubscription ? "all-access" : "none");

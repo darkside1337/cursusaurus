@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Clock, Layers } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
 import type { CatalogCourseItem } from "@/features/courses";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,13 +75,6 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
           ) : null}
         </Link>
 
-        {/* Category kicker */}
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-[11px] tracking-wider uppercase text-ash-gray font-medium font-sohne">
-            {course.category}
-          </span>
-        </div>
-
         {/* Title */}
         <h3 className="font-sohne text-body-lg font-medium text-ink-black leading-snug line-clamp-2 mb-1">
           <Link href={`/${course.slug}`} className="hover:text-slate-gray transition-colors">
@@ -90,44 +83,39 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
         </h3>
 
         {/* Creator Name */}
-        <p className="text-slate-gray text-caption font-sohne line-clamp-1 mb-4">
-          {course.creatorName ? `by ${course.creatorName}` : "Cursusaurus Fellow"}
+        <p className="text-slate-gray text-caption font-sohne line-clamp-1">
+          {course.creatorName ?? "Cursusaurus Fellow"}
         </p>
       </div>
 
-      {/* Footer Details & Pricing/Status */}
-      <div className="pt-3 border-t border-hairline flex items-center justify-between text-xs">
-        {/* Lesson count & duration */}
-        <div className="flex items-center gap-2 text-ash-gray font-medium font-sohne">
-          <span className="flex items-center gap-1">
-            <Layers className="size-3" />
-            {course.lessonCount} {course.lessonCount === 1 ? "lesson" : "lessons"}
-          </span>
-          {durationStr && (
-            <>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Clock className="size-3" />
-                {durationStr}
-              </span>
-            </>
-          )}
-        </div>
+      {/* Footer details strip: category · duration, then access state or price */}
+      <div className="mt-5 pt-3 flex items-center justify-between bg-mist-gray/50 px-3 py-2 rounded-xl">
+        <span className="text-caption text-ash-gray font-medium font-sohne">
+          {course.category}
+          {durationStr ? ` • ${durationStr}` : ""}
+        </span>
 
-        {/* Access state or standalone price */}
-        <div>
-          {accessState === "purchased" ? (
-            <span className="text-ink-black font-medium font-sohne">Enrolled</span>
-          ) : accessState === "all-access" ? (
-            <span className="text-sienna-brown font-medium font-sohne">Included with Pass</span>
-          ) : isComingSoon ? (
-            <span className="text-slate-gray font-medium font-sohne">Coming soon</span>
-          ) : (
-            <span className="text-ink-black font-medium font-sohne text-sm">
-              {formattedPrice}
-            </span>
-          )}
-        </div>
+        {accessState === "purchased" ? (
+          <Link
+            href={`/${course.slug}`}
+            className="text-caption font-medium text-ink-black flex items-center gap-1 hover:text-slate-gray transition-colors"
+          >
+            Enrolled • Continue
+            <ArrowRight className="size-3" />
+          </Link>
+        ) : accessState === "all-access" ? (
+          <span className="text-caption font-medium text-sienna-brown uppercase tracking-wider font-sohne">
+            Included
+          </span>
+        ) : isComingSoon ? (
+          <span className="text-caption font-medium text-slate-gray font-sohne">
+            Coming soon
+          </span>
+        ) : (
+          <span className="text-caption font-medium text-ink-black font-sohne">
+            {formattedPrice}
+          </span>
+        )}
       </div>
     </Card>
   );
