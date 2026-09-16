@@ -57,8 +57,8 @@
   --color-sienna-brown: #5d2a1a;
 
   /* Fonts */
-  --font-signifier: "Signifier", ui-serif, Georgia, serif;
-  --font-sohne: "Sohne", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-signifier: var(--font-signifier-local), "Signifier", "Test Signifier", ui-serif, Georgia, serif;
+  --font-sohne: var(--font-sohne-local), "Sohne", "Test Söhne", Inter, ui-sans-serif, system-ui, sans-serif;
 
   /* Type scale — font-size with bound line-height + letter-spacing via v4 sub-tokens,
      so e.g. `text-heading` alone applies all three, no manual leading-[]/tracking-[] needed */
@@ -147,7 +147,7 @@
   --sidebar-accent-foreground: var(--color-ink-black);
   --sidebar-border: #ececec;
   --sidebar-ring: var(--color-ink-black);
-  --font-sans: var(--font-sohne), var(--font-geist-sans), sans-serif;
+  --font-sans: var(--font-sohne), sans-serif;
 }
 
 @layer base {

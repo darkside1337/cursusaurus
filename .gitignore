@@ -57,3 +57,13 @@ graphify-out/
 
 
 ./drizzle/
+
+#impeccable
+
+# fonts
+/public/fonts/
+/app/fonts/
+*.otf
+*.ttf
+*.woff
+*.woff2
