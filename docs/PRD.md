@@ -1,8 +1,7 @@
 # Cursusaurus — Product Requirements Document
 
-**Status:** Draft v0.1
-**Owner:** [you]
-**Last updated:** 2026-09-14
+**Status:** Active specification
+**Last updated:** 2026-09-16
 
 ---
 
@@ -55,26 +54,38 @@ A single `hasAccess(user, course)` check must be true for two structurally diffe
 
 ## 6. Data model (high-level)
 
+Schema lives in `db/schema.ts` (source of truth; migrations in `drizzle/`). High-level shape:
+
 ```
-User          — id, email, stripe_customer_id
-Course        — id, title, price_cents, is_published, creator_id
-Purchase      — id, user_id, course_id, stripe_payment_intent_id, status, purchased_at
-Subscription  — id, user_id, stripe_subscription_id, status, current_period_end
+User          — Better-Auth managed (id, name, email, image, ...). No stripe_customer_id column;
+                Stripe customer identity is stored on the subscription/purchase records
+Course        — id, title, slug (unique), description, category, thumbnail_url, price_cents,
+                is_published, creator_id, created_at, updated_at
+Lesson        — id, course_id (FK, cascade), title, slug (unique per course), description,
+                order_index, duration_seconds, is_preview, timestamps
+Purchase      — id, user_id, course_id, stripe_payment_intent_id (unique), stripe_session_id (unique),
+                status, purchased_at
+Subscription  — id, user_id, stripe_subscription_id (unique), stripe_customer_id, status,
+                current_period_end, timestamps
 Entitlement   — id, user_id, course_id (nullable = all-access), source, granted_at, revoked_at
+LessonProgress— id, user_id, course_id, lesson_id, lesson_slug, completed, last_position_seconds, updated_at
+ProcessedStripeEvent — id, event_id (unique — webhook idempotency), event_type, processed_at
 ```
 
 ---
 
 ## 7. Milestones
 
-| #   | Milestone                   | Key deliverable                                                                         |
-| --- | --------------------------- | --------------------------------------------------------------------------------------- |
-| 0   | Entitlement core            | `hasAccess()` + full test matrix, no UI/Stripe yet                                      |
-| 1   | One-time purchase flow      | Stripe Checkout (one-time) + webhook → Purchase + Entitlement                           |
-| 2   | Subscription flow           | Stripe Checkout (subscription) + webhook → Subscription + Entitlement, overlap handling |
-| 3   | Content delivery + progress | Gated video playback, progress tracking                                                 |
-| 4   | Admin/creator tools         | Upload, price, publish/unpublish                                                        |
-| 5   | Polish                      | Stripe Customer Portal, email receipts, dunning                                         |
+Numbering mirrors `docs/ROADMAP.md` phases (risk-ordered, and each phase's milestone inherits its gate from the roadmap).
+
+| #   | Milestone (Phase)             | Key deliverable                                                                         |
+| --- | ----------------------------- | --------------------------------------------------------------------------------------- |
+| 0   | Entitlement core (Ph 1)       | `hasAccess()` + full test matrix, no UI/Stripe yet — **done**                           |
+| 1   | Course creation & catalog     | Creator dashboard, lesson management, publish/readiness, public catalog — **done**       |
+| 2   | Payments (One-Time + All-Access) | Stripe Checkout (both modes) + webhooks → Purchase/Subscription + Entitlement          |
+| 3   | Content delivery & progress   | Gated video playback, progress tracking                                                 |
+| 4   | Polish & billing ops          | Stripe Customer Portal, email receipts, dunning                                         |
+| 5   | QA & deploy                   | Verification, deployment, reconciliation cron, production smoke test                    |
 
 ---
 
@@ -88,6 +99,8 @@ Entitlement   — id, user_id, course_id (nullable = all-access), source, grante
 | Per-course pricing range                 | $19–$199, creator-set within range    | Enforced server-side in course create/edit Server Action; revisit ceiling if premium/bundle courses are added                                                                              |
 | Trial period                             | 7-day free trial on All-Access        | Subscription starts in `trialing` status; `hasAccess()` treats `trialing` as access-granting, same as `active`                                                                             |
 | Refund + progress data                   | Access revoked, progress retained     | `lesson_progress` rows are never deleted on refund — learner can re-purchase and resume                                                                                                    |
+| Publication vs. purchase eligibility     | Distinct states                       | Publication and purchase eligibility are separate booleans. A course can be **published** with zero lessons (discoverable, marked "coming soon"); it becomes **purchase-eligible** only once published **and** it has ≥ 1 lesson (enforced in `calculateCourseReadiness`) |
+| Course categories                        | Fixed taxonomy                        | Courses carry a `category` (default `Design`). Catalog ships with: All / Design / Code / Marketing / Writing / Business / Photography                                                                  |
 
 ## 9. Open questions
 

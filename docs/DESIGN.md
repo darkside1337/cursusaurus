@@ -22,14 +22,16 @@ _Adapted from the Steep design system (peach/ink palette, type scale, spacing) �
 | Ash Gray     | `#979799` | `--color-ash-gray`     | Tertiary labels, category tags (course subjects — Design, Marketing, Code)                                                                          |
 | Smoke Gray   | `#a3a6af` | `--color-smoke-gray`   | Placeholder text, disabled labels                                                                                                                   |
 | Blush Peach  | `#fbe1d1` | `--color-blush-peach`  | Access-state accent — "Included in All-Access" badge, locked-content overlay wash, pricing-card highlight. The only chromatic surface in the system |
-| Sienna Brown | `#5d2a1a` | `--color-sienna-brown` | Text/stroke on peach surfaces — used specifically for access-related labels ("All-Access", "Included")                                              |
+| Sienna Brown | `#5d2a1a` | `--color-sienna-brown` | Text/stroke on peach surfaces — used specifically for access-related labels ("All-Access", "Included")                                             |
+| Hairline     | `#ececec` | `--color-hairline`     | Default border color — the standard 1px rule for cards, dividers, inputs, and nav                                                    |
 
 ## Tokens — Typography
 
 ### Signifier — Display and headline serif · `--font-signifier`
 
-- **Substitute:** GT Sectra, Tiempos Headline, Source Serif 4, or ui-serif/Georgia
-- **Weights:** 400 only
+- **Source:** locally installed via `next/font/local` (`app/fonts.ts`) from `public/fonts/signifier/` — Regular + Regular Italic (weight 400)
+- **Fallback stack:** ui-serif, Georgia
+- **Weights:** 400 only (italic included)
 - **Sizes:** 44px, 64px, 90px
 - **Line height:** 1.30
 - **Letter spacing:** -2.25px at 90px, -0.96px at 64px, -0.66px at 44px
@@ -37,8 +39,9 @@ _Adapted from the Steep design system (peach/ink palette, type scale, spacing) �
 
 ### Sohne — Body, UI, and navigation sans · `--font-sohne`
 
-- **Substitute:** Inter, or ui-sans-serif/system-ui stack
-- **Weights:** 400, 430, 450, 480, 500
+- **Source:** locally installed via `next/font/local` (`app/fonts.ts`) from `public/fonts/sohne/` — weights 400 (Buch), 450 (Kräftig), 500 (Halbfett), 700 (Dreiviertelfett), each with italic
+- **Fallback stack:** Inter, ui-sans-serif/system-ui
+- **Weights:** 400, 450, 500, 700
 - **Sizes:** 14px, 15px, 16px, 17px, 18px, 20px, 22px, 26px
 - **Line height:** 1.00–1.50
 - **Role:** Body copy, course descriptions, lesson lists, nav, pricing copy, video player labels — the workhorse covering everything from 14px metadata to 26px subheads
@@ -85,10 +88,11 @@ _Adapted from the Steep design system (peach/ink palette, type scale, spacing) �
 | subtle   | `0 0 0 1px rgba(0,0,0,0.05), 0 4px 24px rgba(0,0,0,0.08)`                                         | `--shadow-subtle`   |
 | subtle-2 | `0 0 0 1px rgba(0,0,0,0.05), 0 8px 40px rgba(0,0,0,0.1)`                                          | `--shadow-subtle-2` |
 | subtle-3 | `0 0 0 1px rgba(4,23,43,0.05), 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)` | `--shadow-subtle-3` |
+| ledger   | `0 0 0 1px rgba(0,0,0,0.05), 0 4px 24px rgba(0,0,0,0.08)` (alias of `subtle`)                    | `--shadow-ledger`   |
 
 ## Components
 
-_Built as shadcn/ui primitives, restyled to these tokens per the UI component rules in `CLAUDE.md` — install the primitive, then compose/restyle in a wrapper component._
+_Built as shadcn/ui primitives, restyled to these tokens per the UI component rules in `AGENTS.md` — install the primitive, then compose/restyle in a wrapper component._
 
 ### Course Card
 
@@ -205,12 +209,12 @@ Tailwind breakpoints in use:
 
 ## Quick Start
 
-### Tailwind v4 (`@theme` — single source, goes directly in `globals.css`)
+### Tailwind v4 (`@theme inline` token block + `:root` shadcn mapping — both live in `globals.css`)
 
-This is the only block to port into `globals.css`. Do not also create a separate `:root` block with these tokens — that duplication is how tokens drift out of sync. See mapping notes below the block for why each section is shaped the way it is.
+The design tokens live in a single `@theme inline` block in `globals.css`. The live file also carries a small `:root` block that maps shadcn's required semantic variables (`--background`, `--foreground`, `--primary`, `--border`, `--radius`, sidebar/chart tokens, etc.) onto those tokens — `components/ui/` reads the semantic names, so the `:root` block is **required** and must not be treated as duplication. See the mapping notes below for why each section is shaped the way it is.
 
 ```css
-@theme {
+@theme inline {
   /* Colors */
   --color-ink-black: #17191c;
   --color-paper-white: #ffffff;
@@ -221,10 +225,12 @@ This is the only block to port into `globals.css`. Do not also create a separate
   --color-smoke-gray: #a3a6af;
   --color-blush-peach: #fbe1d1;
   --color-sienna-brown: #5d2a1a;
+  --color-hairline: #ececec;
 
-  /* Fonts */
-  --font-signifier: "Signifier", ui-serif, Georgia, serif;
-  --font-sohne: "Sohne", Inter, ui-sans-serif, system-ui, sans-serif;
+  /* Fonts — wired to next/font/local CSS variables from app/fonts.ts */
+  --font-signifier: var(--font-signifier-local), "Signifier", ui-serif, Georgia, serif;
+  --font-serif: var(--font-signifier);
+  --font-sohne: var(--font-sohne-local), "Sohne", Inter, ui-sans-serif, system-ui, sans-serif;
 
   /* Type scale — font-size with bound line-height + letter-spacing via v4 sub-tokens,
      so e.g. `text-heading` alone applies all three, no manual leading-[]/tracking-[] needed */
@@ -277,12 +283,37 @@ This is the only block to port into `globals.css`. Do not also create a separate
   --shadow-subtle-3:
     0 0 0 1px rgba(4, 23, 43, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-ledger:
+    0 0 0 1px rgba(0, 0, 0, 0.05), 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+:root {
+  /* Required shadcn semantic mapping — aliases onto the tokens above */
+  --background: var(--color-paper-white);
+  --foreground: var(--color-ink-black);
+  --card: var(--color-paper-white);
+  --card-foreground: var(--color-ink-black);
+  --primary: var(--color-ink-black);
+  --primary-foreground: var(--color-paper-white);
+  --secondary: var(--color-mist-gray);
+  --secondary-foreground: var(--color-ink-black);
+  --muted: var(--color-mist-gray);
+  --muted-foreground: var(--color-slate-gray);
+  --accent: var(--color-fog-white);
+  --accent-foreground: var(--color-ink-black);
+  --border: var(--color-hairline);
+  --input: var(--color-mist-gray);
+  --ring: var(--color-ink-black);
+  --radius: 24px;
+  --font-sans: var(--font-sohne), sans-serif;
 }
 ```
 
 ### Mapping notes (why this differs from a literal token dump)
 
+- **`@theme inline` (not `@theme`).** The font tokens reference runtime CSS variables (`--font-signifier-local`, `--font-sohne-local`) injected by `next/font/local` in `app/fonts.ts`. `inline` makes Tailwind resolve those values at use-site, so the utilities pick up the loaded font; a static `@theme` would bake in placeholder values.
+- **The `:root` block is required, not forbidden.** shadcn primitives read semantic variables (`--primary`, `--background`, `--border`, `--radius`, sidebar/chart tokens) that Tailwind v4 does not generate from `@theme`. The `:root` block aliases them onto the design tokens. Keep the two in sync — `:root` always references `--color-*`/`--font-*` tokens, never raw hex.
 - **`--container-page` → `max-w-page`.** Tailwind v4 only generates a width utility from the `--container-*` namespace, not an arbitrary `--page-max-width` name.
 - **Section gap (80px), card padding (20px), element gap (8px) are intentionally NOT custom tokens.** They were chosen to land exactly on Tailwind's native 4px-multiplier scale — use `gap-20`, `p-5`, `gap-2` directly. Do not add `--spacing-*` overrides to `@theme`: redefining `--spacing-4`/`--spacing-8`/etc. hijacks Tailwind's own multiplier scale (`p-4`, `h-8`, etc.), which breaks shadcn's own component sizing (e.g. default button height `h-8` would silently become 8px instead of 32px).
 - **Type scale sizes use Tailwind v4's sub-token syntax** (`--text-heading--line-height`, `--text-heading--letter-spacing`) so line-height and tracking travel with the font-size utility automatically.
-- **Radii, colors, fonts, and shadows are the only custom-named tokens** components should reference directly (`rounded-cards`, `bg-blush-peach`, `font-signifier`, `shadow-subtle-3`). Everything else — spacing, gaps, padding — uses Tailwind's stock utilities.
+- **Radii, colors, fonts, and shadows are the only custom-named tokens** components should reference directly (`rounded-cards`, `bg-blush-peach`, `font-signifier`, `shadow-subtle-3`, `border-hairline`). Everything else — spacing, gaps, padding — uses Tailwind's stock utilities.

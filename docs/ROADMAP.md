@@ -14,7 +14,7 @@ See `docs/PRD.md` for product requirements and pricing decisions, `docs/ARCHITEC
 - [x] Architecture doc written (`docs/ARCHITECTURE.md`) — entitlement model, invariants, request lifecycles
 - [x] Design system written (`docs/DESIGN.md`) — tokens, components, imagery/layout guidance
 - [x] `AGENTS.md` written — UI/styling workflow, package manager, documentation links
-- [x] Design tokens ported into `globals.css` (single `@theme` block, no `:root` duplication)
+- [x] Design tokens ported into `globals.css` — `@theme inline` token block plus the required `:root` shadcn semantic mapping (see `docs/DESIGN.md` Quick Start)
 - [x] Repository scaffolded: Next.js App Router, Drizzle + Neon, Better-Auth, Supabase Storage client, Stripe SDK
 - [x] Linting, type-checking, and test runner (Vitest) configured
 - [x] `db/schema.ts` defined with all tables from `ARCHITECTURE.md` §1; no migrations yet
@@ -24,6 +24,7 @@ See `docs/PRD.md` for product requirements and pricing decisions, `docs/ARCHITEC
 - [x] `/login` sign-in page — Google + GitHub OAuth buttons only, built per Stitch reference
 - [x] Server-side authentication and authorization helpers established
 - [x] Environment validation implemented for required services and secrets
+- [x] Documentation reconciled with the live codebase (2026-09-16) — README, PRD milestones, ARCHITECTURE requirements/structure, DESIGN token/font reality, ROADMAP status notes; verified with `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm test`
 
 **Gate:** Application runs locally, authentication works, and linting, type-checking, and tests are operational.
 
@@ -165,6 +166,8 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 **Risk note:** This phase is larger and riskier than the original split. One-time purchase and subscription webhook logic are introduced together. Mitigate this with isolated handlers, shared entitlement invariants, explicit transaction boundaries, and separate test matrices for each payment type.
 
+**Status note (2026-09-16):** Infrastructure already landed from earlier phases — the `processed_stripe_events` table with a unique `event_id` constraint (migration 0000) exists, and `features/subscriptions/handlers.ts` (created/updated/deleted with transactional idempotency) plus `features/purchases/checkout.ts` are **implemented but unwired**: no `/api/webhooks/stripe` route, Checkout Server Action, or pricing CTA calls them yet. The course detail page (`app/(marketplace)/[slug]/page.tsx`) is a near-complete scaffold with gated lesson rows and both pricing cards, but its CTAs target `/checkout` and `/pricing` routes that are **not yet built**. Checkboxes below stay unchecked until the routes, Server Actions, and tests exist.
+
 ---
 
 ## Phase 4 — Video Delivery & Progress (Milestone 3)
@@ -201,6 +204,8 @@ This phase combines one-time purchases and subscriptions. The course detail page
 - [ ] Test progress updates, persistence, and retrieval
 - [ ] Test that a refund or subscription cancellation revokes access without deleting learning progress
 - [ ] Test that published-course edits preserve progress for unchanged lesson IDs
+
+**Status note (2026-09-16):** The `lesson_progress` table and its migrations already exist (migration 0000 + 0002 adds `lesson_id`), and `features/video/signed-url.ts` implements `getSignedPlaybackUrl({ userId, courseId, lessonSlug })` (storage path `<courseId>/<lessonSlug>.mp4`, 60s default) with the `hasAccess()` guard — but nothing calls it yet. The `/learn/[courseSlug]/[lessonSlug]` player, `GET /api/video/signed-url` route, upload flow, and progress Server Action wiring are not started; checkboxes below stay unchecked until those land.
 
 **Gate:** Authorized learners can play protected course videos and resume their progress. Unauthorized learners cannot obtain signed playback URLs.
 

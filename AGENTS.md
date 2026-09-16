@@ -6,6 +6,9 @@ For phased task breakdown and current progress, see docs/ROADMAP.md
 For visual design system, typography scales, and UI tokens, see docs/DESIGN.md
 For project structure, system diagram, request lifecycles, and security, see docs/ARCHITECTURE.md
 For schema, invariants, entitlement model, and testing approach, see docs/PRD.md
+For product positioning, principles, and audience definition, see PRODUCT.md
+
+Tests: `pnpm test` (Vitest) runs against an in-memory PGlite database — no external Postgres needed.
 
 ## Roadmap Maintenance
 

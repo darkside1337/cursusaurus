@@ -10,51 +10,82 @@ This document provides agents with a rapid, authoritative understanding of the C
 Cursusaurus/
 ├── app/                            # Next.js App Router root
 │   ├── (marketplace)/              # Public route group — browse & course pages
-│   │   ├── page.tsx                 # Course catalog
-│   │   └── [slug]/page.tsx          # Course detail (preview if no access)
-│   ├── (auth)/                     # Auth route group — login, register
+│   │   ├── layout.tsx               # Marketplace shell (MarketplaceNav)
+│   │   ├── page.tsx                 # Course catalog (server) + access-state mapping
+│   │   ├── catalog-content.tsx      # Client: search/filter grid over published courses
+│   │   ├── loading.tsx              # Catalog skeleton
+│   │   └── [slug]/page.tsx          # Course detail scaffold (gated lessons + pricing panel)
+│   ├── (auth)/                     # Auth route group
+│   │   ├── layout.tsx
+│   │   └── login/page.tsx           # Google + GitHub OAuth sign-in
 │   ├── dashboard/                  # Creator/admin dashboard (auth-gated)
+│   │   ├── layout.tsx               # Dashboard shell (DashboardNav)
 │   │   └── courses/
-│   │       ├── page.tsx             # Course list
-│   │       ├── new/page.tsx         # Create course
-│   │       └── [id]/page.tsx        # Edit course / publish
-│   ├── library/                    # Learner's purchased/subscribed courses (auth-gated)
-│   │   └── page.tsx
-│   ├── learn/
-│   │   └── [courseSlug]/[lessonSlug]/page.tsx   # Video playback, access-gated
-│   ├── billing/
-│   │   └── page.tsx                 # Subscription status, Stripe Customer Portal link
-│   ├── checkout/
-│   │   └── success/page.tsx         # Order polling page ("Finalizing...")
-│   └── api/                        # Route Handlers only — all external API surface
-│       ├── webhooks/stripe/route.ts
-│       ├── order-status/[sessionId]/route.ts
-│       └── video/signed-url/route.ts
+│   │       ├── page.tsx             # Course list (CourseFilterGrid)
+│   │       ├── new/
+│   │       │   ├── page.tsx         # Create course
+│   │       │   ├── actions.ts       # Create-course Server Actions
+│   │       │   └── create-course-form.tsx
+│   │       └── [id]/
+│   │           ├── page.tsx         # Edit course / publish
+│   │           ├── actions.ts       # Edit-course, lesson CRUD + reorder Server Actions
+│   │           └── curriculum-studio.tsx
+│   ├── api/                        # Route Handlers only — all external API surface
+│   │   └── auth/[...all]/route.ts   # Better-Auth endpoint (built)
+│   │   # TODO (Phases 3–4): webhooks/stripe, order-status/[sessionId], video/signed-url
+│   ├── library/                    # Learner's owned/subscribed courses (auth-gated)   [Phase 5]
+│   ├── learn/[courseSlug]/[lessonSlug]/  # Video playback, access-gated              [Phase 4]
+│   ├── billing/                    # Subscription status, Customer Portal link        [Phase 3]
+│   ├── checkout/success/           # Order polling page                               [Phase 3]
+│   ├── fonts.ts                    # next/font/local — Signifier + Sohne
+│   └── globals.css                 # @theme inline tokens + :root shadcn mapping
 ├── features/                       # Domain logic — one folder per bounded context
-│   ├── courses/                    # Course CRUD, slug generation, publish state
-│   ├── purchases/                  # One-time Checkout session creation
-│   ├── subscriptions/              # Subscription Checkout, Customer Portal session
+│   ├── courses/                    # Course CRUD, slug generation, publish state, readiness
+│   ├── purchases/                  # One-time Checkout session creation               [scaffolded]
+│   ├── subscriptions/              # Subscription Checkout, webhook handlers          [scaffolded]
 │   ├── entitlements/               # hasAccess(), entitlement grant/revoke writers
-│   ├── video/                      # Signed playback URL generation (Supabase Storage)
-│   └── progress/                   # Lesson progress queries/mutations
-├── components/                     # Presentation-only, domain-unaware primitives
-│   └── ui/                         # shadcn/ui primitives (installed, not hand-edited)
+│   ├── video/                      # getSignedPlaybackUrl()                           [scaffolded]
+│   └── progress/                   # Lesson progress queries/mutations                 [scaffolded]
+├── components/                     # Presentation components (compose shadcn/ui primitives)
+│   ├── course-card.tsx             # Catalog/creator course card with access badges
+│   ├── course-filter-grid.tsx      # Creator dashboard card grid + search/tabs
+│   ├── marketplace-nav.tsx         # Public site navigation (mobile hamburger)
+│   ├── dashboard-nav.tsx           # Dashboard navigation
+│   └── ui/                         # shadcn/ui primitives (installed, restyled, not hand-edited)
 ├── lib/                            # Infrastructure clients
-│   ├── db.ts                       # Drizzle + Neon client
+│   ├── db/                         # Drizzle client
+│   │   ├── index.ts                # Drizzle + Neon client
+│   │   └── schema/auth-schema.ts   # Better-Auth managed tables (user, session, account, ...)
 │   ├── storage.ts                  # Supabase Storage client (video only)
 │   ├── stripe.ts                   # Stripe SDK instance
-│   └── auth.ts                     # Better-Auth instance
+│   ├── auth.ts                     # Better-Auth instance + getServerSession()
+│   ├── auth-client.ts              # Better-Auth browser client
+│   └── utils.ts                    # cn() helper
+├── config/
+│   └── env.ts                      # T3 env validation (server + client vars)
 ├── db/
-│   └── schema.ts                   # Drizzle schema (single source of truth)
+│   └── schema.ts                   # Drizzle schema (single source of truth; re-exports auth tables)
 ├── drizzle/                        # Drizzle Kit generated SQL migrations
-├── tests/                          # Route Handler + unit tests (Vitest — see §9)
-│   ├── helpers/                    # Shared fixtures, DB seeding, auth helpers
-│   ├── webhooks/stripe.test.ts
+├── scripts/
+│   └── seed.ts                     # Fixture users, courses, lessons, entitlements
+├── tests/                          # Unit + feature tests (Vitest + PGlite — see §9)
+│   ├── helpers/
+│   │   ├── db.ts                   # PGlite in-memory DB + migrator + cleanDb()
+│   │   └── fixtures.ts             # Shared fixtures (users, courses, entitlements)
+│   ├── features/
+│   │   ├── creator-dashboard.test.ts
+│   │   ├── curriculum-studio.test.ts
+│   │   ├── lessons.test.ts
+│   │   ├── public-catalog.test.ts
+│   │   └── scaffold.test.ts
 │   ├── entitlements/hasAccess.test.ts
-│   ├── video/signed-url.test.ts
-│   └── order-status/[sessionId].test.ts
+│   └── smoke.test.ts
+├── PRODUCT.md                      # Product positioning, principles, audience
+├── .plans/                         # Implementation plans shared with the workspace
 └── docs/
     ├── PRD.md                      # Product spec, schema, invariants, testing decisions
+    ├── ROADMAP.md                  # Phased task breakdown and current progress
+    ├── DESIGN.md                   # Visual tokens, typography, component specs
     └── ARCHITECTURE.md             # This document
 ```
 
@@ -62,8 +93,8 @@ Cursusaurus/
 
 - `app/` stays thin — renders layouts, composes feature calls. No business logic.
 - `features/` encapsulates all domain queries, actions, and validation. No routing awareness.
-- `components/` receives all data via props. Never imports from `features/`.
-- `components/ui/` holds shadcn/ui primitives as installed — compose around them in feature-specific components, don't edit generated files unless fixing a genuine primitive bug.
+- `components/` receives all data via props. Domain presentation components (e.g. `course-card.tsx`, `course-filter-grid.tsx`) may import **type contracts only** from `features/` for props — never domain logic, actions, or raw queries.
+- `components/ui/` holds shadcn/ui primitives and is the only strictly domain-agnostic layer: no imports from `features/` or `app/`. Style them via design tokens in `globals.css`; don't hand-edit generated primitives unless fixing a genuine primitive bug.
 - `app/api/` Route Handlers verify auth, call into `features/`, return HTTP responses. No inline business logic.
 - Server Actions are used only for authenticated user-initiated form mutations (course create/edit, progress updates). All external API surface (webhooks, polling, signed URLs) is Route Handlers.
 
@@ -101,8 +132,8 @@ Cursusaurus/
 
 Single Next.js (App Router) application serving learner, creator/admin, and billing flows. No separate backend service.
 
-- **Route Handlers** (`app/api/`): Stripe webhook, video signed-URL issuance, order status polling, progress sync.
-- **Server Actions**: Course create/edit, lesson progress updates.
+- **Route Handlers** (`app/api/`): Better-Auth endpoint (built). Planned (Phases 3–4): Stripe webhook, video signed-URL issuance, order status polling.
+- **Server Actions**: Course create/edit, lesson management, publish; lesson progress updates (Phase 4).
 - **Components** (`components/`): Built on shadcn/ui primitives for accessibility, restyled per `docs/DESIGN.md` tokens.
 - **Deployment**: Vercel
 
@@ -110,7 +141,7 @@ Single Next.js (App Router) application serving learner, creator/admin, and bill
 
 Single source of truth for all domain state. Schema in `db/schema.ts`. Migrations via Drizzle Kit.
 
-Tables: `courses`, `purchases`, `subscriptions`, `entitlements`, `lesson_progress` — plus Better-Auth managed tables.
+Tables: `courses`, `lessons`, `purchases`, `subscriptions`, `entitlements`, `lesson_progress`, `processed_stripe_events` — plus Better-Auth managed tables.
 
 ### Supabase Storage
 
@@ -122,7 +153,7 @@ Object storage for video files only — not used for DB or auth in this project.
 
 ### Neon Postgres
 
-- All domain state: courses, purchases, subscriptions, entitlements, lesson progress
+- All domain state: courses, lessons, purchases, subscriptions, entitlements, lesson progress
 - Better-Auth session/account tables
 - `processed_stripe_events` — webhook idempotency (unique event ID per Stripe delivery)
 - `purchases` and `subscriptions` are payment-state records; **`entitlements` is the only table read for access decisions** (see §6)
@@ -163,7 +194,11 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 ## 7. Request Lifecycles
 
-### One-time purchase
+> Status legend: **BUILT** = fully implemented and wired; **SCAFFOLDED** = domain function exists, not yet exposed via a route/Server Action; **PLANNED** = Phase 3–4 work, not started.
+>
+> Payment, subscription, and video lifecycles below are the target design. Course catalog, course detail, and dashboard flows are built. Stripe webhooks, Checkout session creation, `/learn`, and `/billing` wiring land in Phases 3–4 (see `docs/ROADMAP.md`).
+
+### One-time purchase — PLANNED (Phase 3)
 
 1. Learner clicks "Buy course" → Server Action creates Stripe Checkout Session (one-time mode) → redirect to Stripe
 2. Learner completes payment → Stripe redirects to `/checkout/success?session_id=...`
@@ -171,20 +206,20 @@ These are architectural constraints, not just conventions. Violating them breaks
 4. Stripe delivers `checkout.session.completed` webhook → handler writes `purchases` + course-scoped `entitlements` row in one transaction
 5. Next poll returns `completed` → success page shows confirmation, links to `/learn/...`
 
-### Subscription signup (with trial)
+### Subscription signup (with trial) — PLANNED (Phase 3)
 
 1. Learner clicks "Start All-Access" → Server Action creates Stripe Checkout Session (subscription mode, 7-day trial) → redirect to Stripe
 2. Stripe delivers `customer.subscription.created` (status `trialing`) → handler writes `subscriptions` row + all-access `entitlements` row (`course_id = null`)
 3. On trial end, Stripe attempts first charge: `customer.subscription.updated` (status → `active`) keeps entitlement live; failed charge → status `past_due` → handler revokes the all-access entitlement immediately
 
-### Video playback
+### Video playback — SCAFFOLDED (`getSignedPlaybackUrl` exists; route + player PLANNED in Phase 4)
 
-1. `GET /api/video/signed-url?courseId=...&lessonId=...`
+1. `GET /api/video/signed-url?courseId=...&lessonSlug=...` (route not yet built)
 2. Verify session (Better-Auth) → run `hasAccess(userId, courseId)` against `entitlements`
-3. If true: mint a 60-second signed Supabase Storage URL, return it
+3. If true: call `getSignedPlaybackUrl({ userId, courseId, lessonSlug })` to mint a signed Supabase Storage URL (storage path `<courseId>/<lessonSlug>.mp4`; expiry configurable via `expiresInSeconds`, default 60s), return it
 4. If false: 403
 
-### Subscription cancellation
+### Subscription cancellation — PLANNED (Phase 3)
 
 1. Learner cancels via Stripe Customer Portal
 2. Stripe delivers `customer.subscription.updated` with `cancel_at_period_end = true` — entitlement remains active (no change)
@@ -207,10 +242,11 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 ## 9. Testing
 
-- **Framework**: Vitest (tentative — confirm before Milestone 0 scaffolding)
-- **Seams**: Route Handler boundaries — full request-to-database path, no internal mocking
-- **Priority order**: `hasAccess()` unit tests (full truth table: purchase-only, subscription-only, trialing, both simultaneously, canceled-with-both, past_due, refunded) → Stripe webhook handler → video signed-url handler → order-status handler
-- See `docs/PRD.md` for the full entitlement test matrix required before any Stripe integration work begins
+- **Framework**: Vitest, confirmed. Unit + feature tests run against an **in-memory PGlite** database (`@electric-sql/pglite`) — `tests/helpers/db.ts` instantiates PGlite, applies the real Drizzle migrations from `./drizzle`, and exposes a `cleanDb()` helper; no external Postgres needed.
+- **Seams**: feature/query boundaries driving real queries against PGlite, and Route Handler boundaries on the request-to-database path (external HTTP services — Stripe, Supabase — are not mocked in unit tests; Playwright (`tests/e2e`) covers browser flows).
+- **Current coverage** (see `tests/`): `entitlements/hasAccess.test.ts` (full truth table: purchase-only, subscription-only, trialing, both simultaneously, canceled-with-both, past_due, refunded), `features/public-catalog.test.ts`, `features/creator-dashboard.test.ts`, `features/curriculum-studio.test.ts`, `features/lessons.test.ts`, plus a smoke test.
+- **Priority order for upcoming phases**: Stripe webhook handler tests → video signed-url handler tests → order-status handler tests.
+- See `docs/PRD.md` for the full entitlement test matrix required before any Stripe integration work begins.
 
 ---
 
@@ -235,4 +271,4 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 ---
 
-**Last updated:** 2026-09-14
+**Last updated:** 2026-09-16
