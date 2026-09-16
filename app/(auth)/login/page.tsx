@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { getSafeCallbackUrl } from "@/lib/callback-url";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -48,24 +50,34 @@ function GitHubIcon({ className = "size-[18px]" }: { className?: string }) {
 }
 
 export default function LoginPage() {
-  const [loadingProvider, setLoadingProvider] = useState<
-    "google" | "github" | null
-  >(null);
+	return (
+		<Suspense fallback={null}>
+			<LoginCard />
+		</Suspense>
+	);
+}
 
-  const handleSignIn = async (provider: "google" | "github") => {
-    try {
-      setLoadingProvider(provider);
-      await authClient.signIn.social({
-        provider,
-        callbackURL: "/",
-      });
-    } catch (err) {
-      setLoadingProvider(null);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to initiate sign in"
-      );
-    }
-  };
+function LoginCard() {
+	const [loadingProvider, setLoadingProvider] = useState<
+		"google" | "github" | null
+	>(null);
+	const searchParams = useSearchParams();
+	const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
+
+	const handleSignIn = async (provider: "google" | "github") => {
+		try {
+			setLoadingProvider(provider);
+			await authClient.signIn.social({
+				provider,
+				callbackURL: callbackUrl,
+			});
+		} catch (err) {
+			setLoadingProvider(null);
+			toast.error(
+				err instanceof Error ? err.message : "Failed to initiate sign in"
+			);
+		}
+	};
 
   return (
     <div className="flex flex-col w-full items-center justify-center font-sohne">

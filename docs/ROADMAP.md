@@ -76,6 +76,7 @@ See `docs/PRD.md` for product requirements and pricing decisions, `docs/ARCHITEC
 - [x] Stable course and lesson IDs preserve references and progress when slugs or display metadata change
 - [x] Define behavior for deleting lessons that have existing learner progress
 - [x] Shadcn Sonner feedback layer — `@shadcn/sonner` + root `<Toaster />` replace inline success/error banners across curriculum studio, create-course, and login
+- [x] `/dashboard` eager auth gate via `proxy.ts` — cookie-presence redirect to `/login?callbackUrl=…`, with the login page honoring `callbackUrl` (open-redirect-safe)
 
 ### Public catalog
 
@@ -186,6 +187,7 @@ This phase combines one-time purchases and subscriptions. The course detail page
 - [ ] `/learn/[courseSlug]/[lessonSlug]` page — Video Player Shell component, gated by the signed-URL endpoint, built per Stitch reference
 - [ ] Preview lesson access rules implemented independently from paid lesson access
 - [ ] Handle published lessons whose videos have not yet been uploaded
+- [ ] Extend `proxy.ts` eager auth matcher to `/learn`, `/library`, and `/billing`
 
 ### Progress tracking
 
