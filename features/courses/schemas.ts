@@ -7,9 +7,26 @@ export const coursePriceCentsSchema = z
   .min(1900, "Minimum course price is $19 (1900 cents)")
   .max(19900, "Maximum course price is $199 (19900 cents)");
 
+// Description synopsis is measured in words (600 max), matching the formulate-UI counter.
+function withinWordLimit(value: string, limit: number): boolean {
+  const trimmed = value.trim();
+  return trimmed ? trimmed.split(/\s+/).length <= limit : true;
+}
+
+const courseDescriptionSchema = z
+  .string()
+  .trim()
+  .max(4000, "Description must be 4000 characters or fewer")
+  .refine(
+    (value) => withinWordLimit(value, 600),
+    "Description must be 600 words or fewer"
+  )
+  .optional()
+  .nullable();
+
 export const createCourseSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters").max(100),
-  description: z.string().trim().max(1000).optional().nullable(),
+  description: courseDescriptionSchema,
   category: z.string().trim().min(1).max(50).optional(),
   thumbnailUrl: z.string().url().optional().nullable(),
   priceCents: coursePriceCentsSchema,
@@ -24,7 +41,7 @@ export const createCourseSchema = z.object({
 
 export const updateCourseSchema = z.object({
   title: z.string().trim().min(3).max(100).optional(),
-  description: z.string().trim().max(1000).optional().nullable(),
+  description: courseDescriptionSchema,
   category: z.string().trim().min(1).max(50).optional(),
   thumbnailUrl: z.string().url().optional().nullable(),
   priceCents: coursePriceCentsSchema.optional(),

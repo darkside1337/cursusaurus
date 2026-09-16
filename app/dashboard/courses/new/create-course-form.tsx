@@ -18,9 +18,15 @@ export function CreateCourseForm() {
   const [title, setTitle] = useState("");
   const [customSlug, setCustomSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
 
   const autoSlug = generateSlug(title);
   const displaySlug = customSlug || autoSlug;
+  const wordCount = description.trim()
+    ? description.trim().split(/\s+/).length
+    : 0;
+
+  const markDirty = () => setIsDirty(true);
 
   useEffect(() => {
     if (state?.error) {
@@ -40,6 +46,15 @@ export function CreateCourseForm() {
           <ArrowLeft className="size-4" />
           <span>Back to courses</span>
         </Button>
+
+        {isDirty && (
+          <div className="flex items-center gap-2">
+            <span className="inline-block size-2 rounded-full bg-slate-gray/40" />
+            <span className="text-xs text-slate-gray uppercase tracking-wider font-sohne">
+              Unsaved Changes
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Editorial Header */}
@@ -75,7 +90,10 @@ export function CreateCourseForm() {
             name="title"
             required
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              markDirty();
+            }}
             placeholder="e.g. Architectural Principles in Typography"
             className="h-12 text-[15px]"
           />
@@ -91,7 +109,10 @@ export function CreateCourseForm() {
             id="slug"
             name="slug"
             value={customSlug}
-            onChange={(e) => setCustomSlug(e.target.value)}
+            onChange={(e) => {
+              setCustomSlug(e.target.value);
+              markDirty();
+            }}
             placeholder={autoSlug || "course-url-slug"}
             className="h-12 font-mono text-sm"
           />
@@ -107,16 +128,18 @@ export function CreateCourseForm() {
           <div className="flex items-center justify-between">
             <Label htmlFor="description">Course syllabus & monograph</Label>
             <span className="text-xs text-ash-gray font-sohne">
-              {description.length} / 1000 characters
+              {wordCount} / 600 words
             </span>
           </div>
           <Textarea
             id="description"
             name="description"
             rows={5}
-            maxLength={1000}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              markDirty();
+            }}
             placeholder="Describe the syllabus, prerequisites, and enduring concepts covered in this monograph..."
             className="text-[15px] leading-relaxed"
           />
@@ -137,6 +160,7 @@ export function CreateCourseForm() {
               max={199}
               step={1}
               defaultValue={49}
+              onChange={markDirty}
               required
               className="h-12 pl-8 font-sohne text-[16px] font-medium"
             />
@@ -157,6 +181,7 @@ export function CreateCourseForm() {
             name="thumbnailUrl"
             type="url"
             placeholder="https://images.unsplash.com/..."
+            onChange={markDirty}
             className="h-12 text-[14px]"
           />
           <p className="text-xs text-slate-gray font-sohne">
