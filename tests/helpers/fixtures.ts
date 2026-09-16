@@ -69,3 +69,60 @@ export async function seedEntitlement(
     .returning();
   return row;
 }
+
+export async function seedLesson(
+  db: TestDb,
+  input: {
+    courseId: string;
+    title?: string;
+    slug?: string;
+    description?: string | null;
+    orderIndex?: number;
+    durationSeconds?: number | null;
+    isPreview?: boolean;
+  }
+) {
+  const [row] = await db
+    .insert(schema.lessons)
+    .values({
+      id: crypto.randomUUID(),
+      courseId: input.courseId,
+      title: input.title ?? "Test Lesson",
+      slug: input.slug ?? `lesson-${crypto.randomUUID()}`,
+      description: input.description ?? null,
+      orderIndex: input.orderIndex ?? 0,
+      durationSeconds: input.durationSeconds ?? 300,
+      isPreview: input.isPreview ?? false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  return row;
+}
+
+export async function seedLessonProgress(
+  db: TestDb,
+  input: {
+    userId: string;
+    courseId: string;
+    lessonId: string;
+    lessonSlug: string;
+    completed?: boolean;
+    lastPositionSeconds?: number;
+  }
+) {
+  const [row] = await db
+    .insert(schema.lessonProgress)
+    .values({
+      id: crypto.randomUUID(),
+      userId: input.userId,
+      courseId: input.courseId,
+      lessonId: input.lessonId,
+      lessonSlug: input.lessonSlug,
+      completed: input.completed ?? false,
+      lastPositionSeconds: input.lastPositionSeconds ?? 0,
+      updatedAt: new Date(),
+    })
+    .returning();
+  return row;
+}

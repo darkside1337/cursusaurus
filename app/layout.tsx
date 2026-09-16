@@ -13,7 +13,11 @@ export const metadata: Metadata = {
   description: "Course platform with one-time purchases and All-Access subscription pass",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"

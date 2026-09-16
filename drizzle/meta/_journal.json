@@ -15,6 +15,20 @@
       "when": 1789510761233,
       "tag": "0001_thick_iron_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789567069372,
+      "tag": "0002_married_centennial",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789572756038,
+      "tag": "0003_whole_sugar_man",
+      "breakpoints": true
     }
   ]
 }

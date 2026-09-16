@@ -10,6 +10,8 @@ export const coursePriceCentsSchema = z
 export const createCourseSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters").max(100),
   description: z.string().trim().max(1000).optional().nullable(),
+  category: z.string().trim().min(1).max(50).optional(),
+  thumbnailUrl: z.string().url().optional().nullable(),
   priceCents: coursePriceCentsSchema,
   creatorId: z.string().min(1, "Creator ID is required"),
   slug: z
@@ -23,6 +25,8 @@ export const createCourseSchema = z.object({
 export const updateCourseSchema = z.object({
   title: z.string().trim().min(3).max(100).optional(),
   description: z.string().trim().max(1000).optional().nullable(),
+  category: z.string().trim().min(1).max(50).optional(),
+  thumbnailUrl: z.string().url().optional().nullable(),
   priceCents: coursePriceCentsSchema.optional(),
   slug: z
     .string()
@@ -38,4 +42,38 @@ export const courseSlugParamSchema = z.object({
 
 export const courseIdParamSchema = z.object({
   courseId: z.string().trim().min(1, "Course ID is required"),
+});
+
+export const createLessonSchema = z.object({
+  courseId: z.string().trim().min(1, "Course ID is required"),
+  title: z.string().trim().min(2, "Title must be at least 2 characters").max(120),
+  slug: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens")
+    .optional(),
+  description: z.string().trim().max(2000).optional().nullable(),
+  durationSeconds: z.number().int().min(0).optional().nullable(),
+  isPreview: z.boolean().optional(),
+});
+
+export const updateLessonSchema = z.object({
+  title: z.string().trim().min(2).max(120).optional(),
+  slug: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens")
+    .optional(),
+  description: z.string().trim().max(2000).optional().nullable(),
+  durationSeconds: z.number().int().min(0).optional().nullable(),
+  isPreview: z.boolean().optional(),
+});
+
+export const reorderLessonsSchema = z.object({
+  courseId: z.string().trim().min(1, "Course ID is required"),
+  lessonIds: z.array(z.string().trim().min(1)).min(1, "At least one lesson ID is required"),
+});
+
+export const lessonIdParamSchema = z.object({
+  lessonId: z.string().trim().min(1, "Lesson ID is required"),
 });

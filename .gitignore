@@ -16,6 +16,8 @@
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/.playwright-mcp/
+*.png
 
 # next.js
 /.next/

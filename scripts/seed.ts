@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { courses, entitlements } from "@/db/schema";
+import { courses, entitlements, lessons } from "@/db/schema";
 import { user } from "@/lib/db/schema/auth-schema";
 
 async function seed() {
@@ -57,6 +57,52 @@ async function seed() {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    .onConflictDoNothing();
+
+  await db
+    .insert(lessons)
+    .values([
+      {
+        id: "seed-lesson-ts-01",
+        courseId: "seed-course-ts",
+        title: "The Type System Foundation",
+        slug: "type-system-foundation",
+        description: "Understanding structural typing and primitives.",
+        orderIndex: 0,
+        durationSeconds: 1125, // 18m 45s
+        isPreview: true,
+      },
+      {
+        id: "seed-lesson-ts-02",
+        courseId: "seed-course-ts",
+        title: "Generics and Constraints",
+        slug: "generics-and-constraints",
+        description: "Building flexible, reusable type contracts.",
+        orderIndex: 1,
+        durationSeconds: 1452, // 24m 12s
+        isPreview: false,
+      },
+      {
+        id: "seed-lesson-ts-03",
+        courseId: "seed-course-ts",
+        title: "Conditional and Mapped Types",
+        slug: "conditional-and-mapped-types",
+        description: "Advanced type transformations for domain modeling.",
+        orderIndex: 2,
+        durationSeconds: 908, // 15m 08s
+        isPreview: false,
+      },
+      {
+        id: "seed-lesson-next-01",
+        courseId: "seed-course-next",
+        title: "Server Components & Suspense Architecture",
+        slug: "rsc-suspense-architecture",
+        description: "Deep dive into React 19 Server Components.",
+        orderIndex: 0,
+        durationSeconds: 1840,
+        isPreview: true,
+      },
+    ])
     .onConflictDoNothing();
 
   // Purchase-scoped entitlement: learner owns intro-to-typescript

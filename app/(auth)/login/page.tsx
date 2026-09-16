@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Loader2, AlertCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,30 +69,38 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col w-full items-center justify-center">
-      <Card className="w-full max-w-[420px] bg-paper-white rounded-cards p-6 sm:p-11 shadow-sm border border-border flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
+    <div className="flex flex-col w-full items-center justify-center font-sohne">
+      <Card className="w-full max-w-[420px] bg-paper-white rounded-cards p-6 sm:p-11 shadow-subtle border border-black/[0.05] flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
         {/* Blush-peach glow per Stitch design spec */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-blush-peach/30 rounded-full blur-3xl pointer-events-none" />
 
         {/* Eyebrow */}
-        <div className="mb-2 flex items-center justify-center gap-2">
+        <div className="mb-2.5 flex items-center justify-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-sienna-brown/40" />
-          <span className="text-[11px] uppercase tracking-widest text-slate-gray">
+          <span className="text-[11px] uppercase tracking-widest text-slate-gray font-medium">
             Prospectus Access
           </span>
           <span className="w-1.5 h-1.5 rounded-full bg-sienna-brown/40" />
         </div>
 
-        <h1 className="font-serif text-[30px] font-normal text-ink-black tracking-tight">
+        <h1 className="font-signifier text-[32px] font-normal text-ink-black tracking-tight leading-tight">
           Cursusaurus
         </h1>
-        <p className="text-[22px] font-medium text-ink-black mt-4 mb-8">
+        <p className="text-[22px] font-medium text-ink-black mt-3 mb-1 tracking-tight">
           Sign in to continue
+        </p>
+        <p className="text-caption text-slate-gray max-w-[280px] leading-relaxed mb-7">
+          Deliberate, quiet learning for enrolled fellows & monograph subscribers.
         </p>
 
         {errorMessage && (
-          <div className="w-full mb-4 p-3 rounded-xl bg-destructive/10 text-destructive text-sm">
-            {errorMessage}
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="w-full mb-4 p-3 rounded-xl bg-destructive/10 text-destructive text-sm flex items-center gap-2 text-left"
+          >
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{errorMessage}</span>
           </div>
         )}
 
@@ -101,9 +111,13 @@ export default function LoginPage() {
             variant="outline"
             disabled={loadingProvider !== null}
             onClick={() => handleSignIn("google")}
-            className="w-full h-12 rounded-buttons bg-paper-white hover:bg-mist-gray text-ink-black text-sm font-medium flex items-center justify-center gap-3 transition-all border border-border shadow-xs hover:shadow-sm active:scale-[0.98]"
+            className="w-full h-12 rounded-buttons bg-paper-white hover:bg-mist-gray text-ink-black text-caption font-medium flex items-center justify-center gap-3 transition-all border border-black/[0.08] shadow-subtle hover:shadow-subtle-2 active:scale-[0.99]"
           >
-            <GoogleIcon className="size-[18px] shrink-0" />
+            {loadingProvider === "google" ? (
+              <Loader2 className="size-[18px] animate-spin shrink-0 text-slate-gray" />
+            ) : (
+              <GoogleIcon className="size-[18px] shrink-0" />
+            )}
             <span>
               {loadingProvider === "google"
                 ? "Connecting to Google…"
@@ -117,9 +131,13 @@ export default function LoginPage() {
             variant="default"
             disabled={loadingProvider !== null}
             onClick={() => handleSignIn("github")}
-            className="w-full h-12 rounded-buttons bg-ink-black hover:bg-ink-black/90 text-paper-white text-sm font-medium flex items-center justify-center gap-3 transition-all shadow-xs hover:shadow-sm active:scale-[0.98]"
+            className="w-full h-12 rounded-buttons bg-ink-black hover:bg-ink-black/90 text-paper-white text-caption font-medium flex items-center justify-center gap-3 transition-all shadow-subtle hover:shadow-subtle-2 active:scale-[0.99]"
           >
-            <GitHubIcon className="size-[18px] shrink-0 text-paper-white" />
+            {loadingProvider === "github" ? (
+              <Loader2 className="size-[18px] animate-spin shrink-0 text-paper-white" />
+            ) : (
+              <GitHubIcon className="size-[18px] shrink-0 text-paper-white" />
+            )}
             <span className="text-paper-white">
               {loadingProvider === "github"
                 ? "Connecting to GitHub…"
@@ -128,23 +146,41 @@ export default function LoginPage() {
           </Button>
         </div>
 
+        {/* Soft Divider & Guest Action */}
+        <div className="w-full flex items-center justify-center my-6 gap-3">
+          <div className="h-px bg-border flex-1" />
+          <span className="text-[11px] text-slate-gray uppercase tracking-widest font-medium">
+            or explore
+          </span>
+          <div className="h-px bg-border flex-1" />
+        </div>
+
+        <Button
+          variant="ghost"
+          render={<Link href="/" />}
+          nativeButton={false}
+          className="w-full h-10 rounded-buttons text-slate-gray hover:text-ink-black hover:bg-mist-gray text-caption font-medium transition-colors"
+        >
+          Browse syllabus as guest
+        </Button>
+
         {/* ToS & Privacy */}
         <div className="mt-6 flex flex-col items-center">
           <p className="text-[13px] text-slate-gray leading-relaxed max-w-[280px]">
             By continuing, you agree to our{" "}
-            <a
-              href="#"
+            <Link
+              href="/terms"
               className="underline underline-offset-2 decoration-smoke-gray hover:text-ink-black transition-colors"
             >
               Terms
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a
-              href="#"
+            <Link
+              href="/privacy"
               className="underline underline-offset-2 decoration-smoke-gray hover:text-ink-black transition-colors"
             >
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
         </div>
@@ -153,7 +189,7 @@ export default function LoginPage() {
       {/* Bottom tagline */}
       <div className="mt-8 flex items-center justify-center gap-2">
         <span className="w-1 h-1 rounded-full bg-slate-gray/40" />
-        <span className="text-[12px] tracking-wide text-slate-gray">
+        <span className="text-[12px] tracking-wide text-slate-gray font-medium">
           Single unified access for members & subscribers
         </span>
         <span className="w-1 h-1 rounded-full bg-slate-gray/40" />

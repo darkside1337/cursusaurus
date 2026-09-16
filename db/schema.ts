@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, index, unique } from "drizzle-orm/pg-core";
 import { user } from "@/lib/db/schema/auth-schema";
 
 export * from "@/lib/db/schema/auth-schema";
@@ -8,6 +8,8 @@ export const courses = pgTable("courses", {
   title: text("title").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  category: text("category").default("Design").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
   priceCents: integer("price_cents").notNull(),
   isPublished: boolean("is_published").default(false).notNull(),
   creatorId: text("creator_id")
@@ -18,6 +20,30 @@ export const courses = pgTable("courses", {
     .$onUpdate(() => new Date())
     .notNull(),
 });
+
+export const lessons = pgTable(
+  "lessons",
+  {
+    id: text("id").primaryKey(),
+    courseId: text("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    orderIndex: integer("order_index").notNull(),
+    durationSeconds: integer("duration_seconds"),
+    isPreview: boolean("is_preview").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    unique("lessons_course_id_slug_unique").on(table.courseId, table.slug),
+    index("lessons_course_order_idx").on(table.courseId, table.orderIndex),
+  ]
+);
 
 export const purchases = pgTable("purchases", {
   id: text("id").primaryKey(),
@@ -73,6 +99,7 @@ export const lessonProgress = pgTable("lesson_progress", {
   courseId: text("course_id")
     .notNull()
     .references(() => courses.id),
+  lessonId: text("lesson_id").references(() => lessons.id),
   lessonSlug: text("lesson_slug").notNull(),
   completed: boolean("completed").default(false).notNull(),
   lastPositionSeconds: integer("last_position_seconds").default(0).notNull(),

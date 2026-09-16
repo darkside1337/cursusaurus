@@ -29,9 +29,12 @@ export async function cleanDb(db: TestDb) {
     db.delete(schema.verification),
   ]);
 
-  // 2. Delete courses (references user)
+  // 2. Delete lessons (references courses)
+  await db.delete(schema.lessons);
+
+  // 3. Delete courses (references user)
   await db.delete(schema.courses);
 
-  // 3. Delete root user table
+  // 4. Delete root user table
   await db.delete(schema.user);
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "courses" ADD COLUMN "category" text DEFAULT 'Design' NOT NULL;
