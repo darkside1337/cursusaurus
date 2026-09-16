@@ -60,7 +60,8 @@ graphify-out/
 
 ./drizzle/
 
-#impeccable
+# impeccable
+.impeccable/
 
 # fonts
 /public/fonts/
