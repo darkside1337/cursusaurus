@@ -15,9 +15,12 @@ import {
   AlertTriangle,
   Loader2,
   Eye,
+  Camera,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Lesson, CourseReadiness } from "@/features/courses";
+import { updateCourseSchema } from "@/features/courses/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +28,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +111,14 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   const [category, setCategory] = useState<string>(initialCourse.category ?? "Design");
   const [priceDollars, setPriceDollars] = useState(Math.round(initialCourse.priceCents / 100));
   const [thumbnailUrl, setThumbnailUrl] = useState(initialCourse.thumbnailUrl ?? "");
+  const [isMetadataDirty, setIsMetadataDirty] = useState(false);
+  const [activeTab, setActiveTab] = useState<"prospectus" | "curriculum">("prospectus");
+
+  const wordCount = description.trim()
+    ? description.trim().split(/\s+/).length
+    : 0;
+
+  const markMetadataDirty = () => setIsMetadataDirty(true);
 
   // Dialog States
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
@@ -152,45 +168,100 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
     });
   };
 
-  // Save Metadata
-  const handleSaveMetadata = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // Persist metadata to the server; returns false on failure.
+  const persistMetadata = async (): Promise<boolean> => {
     if (priceDollars < 19 || priceDollars > 199) {
       toast.error(
         "Price must be constrained between $19 and $199 USD per PRD specifications."
       );
-      return;
+      return false;
     }
 
-    startTransition(async () => {
-      const res = await updateCourseMetadataAction(course.id, {
-        title,
-        slug: slug.trim() || undefined,
-        description,
-        category,
-        priceDollars,
-        thumbnailUrl: thumbnailUrl.trim() || null,
-      });
+    const parsed = updateCourseSchema.safeParse({
+      title,
+      description: description || null,
+      category,
+      priceCents: Math.round(priceDollars * 100),
+      thumbnailUrl: thumbnailUrl.trim() || null,
+      slug: slug.trim() || undefined,
+    });
 
-      if (res.success && res.data) {
-        setCourse((prev) => ({
-          ...prev,
-          ...res.data!,
-        }));
-        setSlug(res.data.slug);
-        setTitle(res.data.title);
-        setDescription(res.data.description ?? "");
-        setCategory(res.data.category ?? "Design");
-        setPriceDollars(Math.round(res.data.priceCents / 100));
-        setThumbnailUrl(res.data.thumbnailUrl ?? "");
-        toast.success("Course metadata saved successfully.");
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0];
+      toast.error(firstError?.message || "Invalid course metadata");
+      return false;
+    }
+
+    const res = await updateCourseMetadataAction(course.id, {
+      title,
+      slug: slug.trim() || undefined,
+      description,
+      category,
+      priceDollars,
+      thumbnailUrl: thumbnailUrl.trim() || null,
+    });
+
+    if (!res.success || !res.data) {
+      toast.error(res.error || "Failed to save course metadata", {
+        description: "Your changes were not saved.",
+      });
+      return false;
+    }
+
+    setCourse((prev) => ({
+      ...prev,
+      ...res.data!,
+    }));
+    setSlug(res.data.slug);
+    setTitle(res.data.title);
+    setDescription(res.data.description ?? "");
+    setCategory(res.data.category ?? "Design");
+    setPriceDollars(Math.round(res.data.priceCents / 100));
+    setThumbnailUrl(res.data.thumbnailUrl ?? "");
+    setIsMetadataDirty(false);
+    return true;
+  };
+
+  // Save Metadata (optionally also flip publication like the segmented footer buttons)
+  const handleSaveMetadata = (mode: "draft" | "publish") => {
+    startTransition(async () => {
+      const saved = await persistMetadata();
+      if (!saved) return;
+
+      const wantsPublished = mode === "publish";
+      if (course.isPublished !== wantsPublished) {
+        const res = await toggleCoursePublishAction(course.id, wantsPublished);
+        if (res.success && res.data) {
+          setCourse((prev) => ({
+            ...prev,
+            isPublished: wantsPublished,
+            readiness: res.data!.readiness,
+          }));
+          toast.success(
+            wantsPublished
+              ? lessons.length === 0
+                ? "Course published as Coming Soon (add at least 1 lesson to enable purchasing)."
+                : "Course published! It is now live in the catalog."
+              : "Course unpublished and switched to draft mode."
+          );
+        } else {
+          toast.error(res.error || "Failed to update publication status");
+        }
       } else {
-        toast.error(res.error || "Failed to save course metadata", {
-          description: "Your changes were not saved.",
-        });
+        toast.success("Course metadata saved successfully.");
       }
     });
+  };
+
+  // Reset metadata form fields to the last server-confirmed course state.
+  const handleDiscardChanges = () => {
+    setTitle(course.title);
+    setSlug(course.slug);
+    setDescription(course.description ?? "");
+    setCategory(course.category ?? "Design");
+    setPriceDollars(Math.round(course.priceCents / 100));
+    setThumbnailUrl(course.thumbnailUrl ?? "");
+    setIsMetadataDirty(false);
   };
 
   // Open Create Lesson Modal
@@ -326,7 +397,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   };
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6 py-6 md:py-10 flex flex-col gap-8">
+    <div className="w-full max-w-[720px] mx-auto px-4 md:px-6 py-6 md:py-10 flex flex-col gap-8">
       {/* Top Breadcrumbs & Back Navigation */}
       <div className="flex items-center justify-between pb-4 border-b border-hairline">
         <Button
@@ -352,7 +423,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
         </div>
       </div>
 
-      {/* Editorial Header with Title and Publication Switch */}
+      {/* Editorial Header with Title and Segmented Publication Toggle */}
       <header className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-wider font-medium text-ash-gray font-sohne">
@@ -379,18 +450,33 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
             {course.title}
           </h1>
 
-          {/* Publication Toggle Switch */}
-          <div className="flex items-center gap-3 self-start md:self-auto bg-paper-white border border-hairline rounded-full px-4 py-2 shadow-sm">
-            <span className="text-xs font-medium text-slate-gray font-sohne">
-              {isPublished ? "Published" : "Draft"}
-            </span>
-            <Switch
-              checked={isPublished}
-              onCheckedChange={handleTogglePublish}
-              disabled={isPending}
-              aria-label="Toggle course publication"
-            />
-          </div>
+          {/* Segmented Draft / Published Toggle */}
+          <ToggleGroup
+            value={isPublished ? ["published"] : ["draft"]}
+            disabled={isPending}
+            onValueChange={(groupValue) => {
+              const next = groupValue[groupValue.length - 1];
+              if (next === "draft" && isPublished) handleTogglePublish(false);
+              if (next === "published" && !isPublished) handleTogglePublish(true);
+            }}
+            aria-label="Course publication status"
+            spacing={1}
+            className="rounded-full p-1 bg-mist-gray self-start md:self-auto"
+          >
+            <ToggleGroupItem
+              value="draft"
+              className="h-auto min-w-0 rounded-full px-4 py-1.5 font-sohne text-xs font-medium text-slate-gray hover:text-ink-black data-pressed:bg-ink-black data-pressed:text-paper-white data-pressed:shadow-sm"
+            >
+              Draft
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="published"
+              className="h-auto min-w-0 rounded-full px-4 py-1.5 font-sohne text-xs font-medium text-slate-gray hover:text-ink-black data-pressed:bg-ink-black data-pressed:text-paper-white data-pressed:shadow-sm flex items-center gap-1.5"
+            >
+              {isPublished && <span className="size-1.5 rounded-full bg-blush-peach" />}
+              Published
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         {/* Readiness notice if published with 0 lessons */}
@@ -412,208 +498,79 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
         )}
       </header>
 
-      {/* Main Studio Grid: Left Syllabus/Curriculum, Right Course Metadata */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Curriculum & Lesson Management (7 cols) */}
-        <section className="lg:col-span-7 flex flex-col gap-6" aria-labelledby="curriculum-heading">
-          <div className="flex items-center justify-between border-b border-hairline pb-4">
-            <div>
-              <h2 id="curriculum-heading" className="font-serif text-2xl text-ink-black font-normal">
-                Curriculum Syllabus
-              </h2>
-              <p className="text-xs text-slate-gray mt-0.5 font-sohne">
-                {lessons.length} {lessons.length === 1 ? "lecture" : "lectures"} · {formatCurriculumDuration(totalDurationSeconds)}
-              </p>
+      {/* Prospectus / Curriculum Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as "prospectus" | "curriculum")}
+        className="w-full"
+      >
+        <TabsList
+          variant="line"
+          className="w-full justify-start gap-6 rounded-none border-b border-mist-gray px-0 group-data-horizontal/tabs:h-11"
+        >
+          <TabsTrigger
+            value="prospectus"
+            className="flex-none rounded-none border-0 px-0 font-sohne text-xs font-medium text-slate-gray hover:text-ink-black group-data-horizontal/tabs:after:bottom-[-1px] data-active:text-ink-black"
+          >
+            Course Prospectus
+          </TabsTrigger>
+          <TabsTrigger
+            value="curriculum"
+            className="flex-none rounded-none border-0 px-0 font-sohne text-xs font-medium text-slate-gray hover:text-ink-black group-data-horizontal/tabs:after:bottom-[-1px] data-active:text-ink-black"
+          >
+            Curriculum & Lessons
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Prospectus: Course Metadata */}
+        <TabsContent value="prospectus" className="outline-none">
+          <form
+            className="flex flex-col gap-6 pt-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveMetadata("draft");
+            }}
+          >
+            {/* Course Title */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="course-title">Course title</Label>
+              <Input
+                id="course-title"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  markMetadataDirty();
+                }}
+                required
+                placeholder="Course title"
+                className="h-11 text-sm rounded-inputs"
+              />
             </div>
 
-            <Button
-              onClick={handleOpenCreateLesson}
-              className="rounded-full bg-ink-black text-paper-white px-4 py-2 text-xs font-medium hover:opacity-90 transition-opacity flex items-center gap-1.5"
-            >
-              <Plus className="size-4" />
-              <span>Add lesson</span>
-            </Button>
-          </div>
-
-          {/* Lessons List */}
-          {lessons.length > 0 ? (
-            <div className="flex flex-col gap-3" role="list">
-              {lessons.map((lesson, index) => {
-                const lessonNumber = (index + 1).toString().padStart(2, "0");
-
-                return (
-                  <Card
-                    key={lesson.id}
-                    role="listitem"
-                    className="p-4 bg-paper-white rounded-[16px] border border-hairline hover:border-slate-gray/30 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
-                  >
-                    {/* Left details */}
-                    <div className="flex items-start md:items-center gap-3 flex-1 min-w-0">
-                      {/* Reorder Buttons */}
-                      <div className="flex flex-col gap-0.5 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={index === 0 || isPending}
-                          onClick={() => handleMoveLesson(index, "up")}
-                          aria-label={`Move lesson ${lesson.title} up`}
-                          className="size-6 text-slate-gray hover:text-ink-black disabled:opacity-30"
-                        >
-                          <ArrowUp className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={index === lessons.length - 1 || isPending}
-                          onClick={() => handleMoveLesson(index, "down")}
-                          aria-label={`Move lesson ${lesson.title} down`}
-                          className="size-6 text-slate-gray hover:text-ink-black disabled:opacity-30"
-                        >
-                          <ArrowDown className="size-3.5" />
-                        </Button>
-                      </div>
-
-                      {/* Number & Icon */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono text-xs text-ash-gray font-medium">
-                          {lessonNumber}
-                        </span>
-                        <div className="size-8 rounded-lg bg-mist-gray flex items-center justify-center text-slate-gray">
-                          <Video className="size-4 stroke-[1.75]" />
-                        </div>
-                      </div>
-
-                      {/* Title, slug, duration, badges */}
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-sm font-medium text-ink-black font-sohne truncate">
-                            {lesson.title}
-                          </h3>
-                          {lesson.isPreview && (
-                            <Badge className="bg-mist-gray text-ink-black border border-hairline text-[10px] px-2 py-0 rounded-full font-medium">
-                              Free Preview
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 text-xs text-slate-gray mt-1 font-sohne">
-                          <span className="flex items-center gap-1">
-                            <Clock className="size-3 text-ash-gray" />
-                            {formatDuration(lesson.durationSeconds)}
-                          </span>
-                          <span>•</span>
-                          <span className="text-ash-gray">
-                            No video uploaded (metadata mode)
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right actions */}
-                    <div className="flex items-center gap-1.5 self-end md:self-center shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-hairline w-full md:w-auto justify-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenEditLesson(lesson)}
-                        aria-label={`Edit ${lesson.title}`}
-                        className="size-8 text-slate-gray hover:text-ink-black"
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDeleteDialog(lesson)}
-                        aria-label={`Delete ${lesson.title}`}
-                        className="size-8 text-slate-gray hover:text-destructive"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card className="p-8 bg-paper-white rounded-[20px] border border-hairline text-center flex flex-col items-center justify-center gap-3">
-              <div className="size-12 rounded-full bg-mist-gray flex items-center justify-center text-slate-gray">
-                <Video className="size-5 stroke-[1.5]" />
+            {/* Description */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="course-desc">Description</Label>
+                <span className="text-[11px] text-ash-gray font-sohne">
+                  {wordCount} / 600 words
+                </span>
               </div>
-              <div className="max-w-sm">
-                <h3 className="text-base font-medium text-ink-black font-serif">
-                  No curriculum lessons yet
-                </h3>
-                <p className="text-xs text-slate-gray mt-1 font-sohne">
-                  Organize your course syllabus with structured chapters and lectures.
-                </p>
-              </div>
-              <Button
-                onClick={handleOpenCreateLesson}
-                variant="outline"
-                className="mt-2 rounded-full border-hairline text-ink-black text-xs font-medium px-5"
-              >
-                <Plus className="size-3.5 mr-1.5" />
-                <span>Add first lecture</span>
-              </Button>
-            </Card>
-          )}
-
-          {/* Add lesson dashed footer button */}
-          {lessons.length > 0 && (
-            <Button
-              onClick={handleOpenCreateLesson}
-              variant="outline"
-              className="w-full py-6 rounded-[16px] border-dashed border-slate-gray/30 hover:border-ink-black hover:bg-mist-gray/40 text-slate-gray hover:text-ink-black text-xs font-medium flex items-center justify-center gap-2 transition-all"
-            >
-              <Plus className="size-4" />
-              <span>Add another lesson to curriculum</span>
-            </Button>
-          )}
-        </section>
-
-        {/* Right Column: Course Metadata & Prospectus Form (5 cols) */}
-        <section className="lg:col-span-5" aria-labelledby="metadata-heading">
-          <Card className="p-6 bg-paper-white rounded-cards border border-hairline shadow-subtle flex flex-col gap-6">
-            <div className="border-b border-hairline pb-4">
-              <h2 id="metadata-heading" className="font-serif text-2xl text-ink-black font-normal">
-                Course Prospectus
-              </h2>
-              <p className="text-xs text-slate-gray mt-0.5 font-sohne">
-                Core monograph metadata, pricing, and catalog presentation.
-              </p>
+              <Textarea
+                id="course-desc"
+                rows={4}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  markMetadataDirty();
+                }}
+                placeholder="Outline the core concepts, thesis, and objectives..."
+                className="text-sm rounded-inputs leading-relaxed"
+              />
             </div>
 
-            <form onSubmit={handleSaveMetadata} className="flex flex-col gap-5">
-              {/* Title */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="course-title">Title</Label>
-                <Input
-                  id="course-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  placeholder="Course title"
-                  className="h-11 text-sm rounded-inputs"
-                />
-              </div>
-
-              {/* Slug */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="course-slug">Catalog URL Slug</Label>
-                  <span className="text-[11px] text-ash-gray font-mono">/{slug}</span>
-                </div>
-                <Input
-                  id="course-slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="url-slug"
-                  className="h-11 text-sm font-mono rounded-inputs"
-                />
-              </div>
-
-              {/* Category Pills */}
+            {/* Category & Price in Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              {/* Category */}
               <div className="flex flex-col gap-1.5">
                 <Label>Subject Category</Label>
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -623,7 +580,10 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                       type="button"
                       variant={category === cat ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setCategory(cat)}
+                      onClick={() => {
+                        setCategory(cat);
+                        markMetadataDirty();
+                      }}
                       className={`rounded-full text-xs font-medium px-3.5 py-1 ${
                         category === cat
                           ? "bg-ink-black text-paper-white"
@@ -636,31 +596,9 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Price */}
               <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="course-description">Syllabus Monograph</Label>
-                  <span className="text-[11px] text-ash-gray">
-                    {description.length}/1000
-                  </span>
-                </div>
-                <Textarea
-                  id="course-description"
-                  rows={4}
-                  maxLength={1000}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Overview of core concepts, thesis, and objectives..."
-                  className="text-sm rounded-inputs leading-relaxed"
-                />
-              </div>
-
-              {/* Price ($19–$199 PRD Constraint) */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="course-price">Standalone Price (USD)</Label>
-                  <span className="text-[11px] text-slate-gray font-medium">$19 – $199</span>
-                </div>
+                <Label htmlFor="course-price">Standard Price</Label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray text-sm font-medium select-none pointer-events-none">
                     $
@@ -675,66 +613,279 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                     onChange={(e) => {
                       const val = e.target.value;
                       setPriceDollars(val === "" ? 0 : Number.parseInt(val, 10) || 0);
+                      markMetadataDirty();
                     }}
                     required
                     className="h-11 pl-8 text-sm font-medium rounded-inputs"
                   />
                 </div>
                 <p className="text-[11px] text-slate-gray leading-relaxed font-sohne">
-                  One-time price for perpetual ownership. Automatically included for All-Access subscribers.
+                  Must be between $19 and $199. Included automatically for All-Access subscribers; standalone purchasers receive permanent access.
                 </p>
               </div>
+            </div>
 
-              {/* Thumbnail URL & Live Preview */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="course-thumb">Cover Monograph URL (16:9)</Label>
-                <Input
-                  id="course-thumb"
-                  type="url"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="h-11 text-xs rounded-inputs"
-                />
-
+            {/* Cover Thumbnail */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="course-thumb">Cover thumbnail</Label>
+              <div className="relative group rounded-2xl overflow-hidden bg-mist-gray border border-hairline aspect-video flex items-center justify-center">
                 {thumbnailUrl ? (
-                  <div className="relative aspect-video w-full rounded-images overflow-hidden bg-mist-gray mt-2 border border-hairline">
-                    <Image
-                      src={thumbnailUrl}
-                      alt="Thumbnail preview"
-                      fill
-                      className="object-cover"
-                      sizes="300px"
-                    />
-                  </div>
+                  <Image
+                    src={thumbnailUrl}
+                    alt="Thumbnail preview"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="760px"
+                  />
                 ) : (
-                  <div className="aspect-video w-full rounded-images bg-mist-gray flex items-center justify-center text-ash-gray text-xs mt-2 border border-hairline">
-                    No preview image specified
-                  </div>
+                  <Camera className="size-8 text-ash-gray" />
                 )}
+
+                <label
+                  htmlFor="course-thumb"
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center bg-ink-black/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all cursor-pointer"
+                >
+                  <div className="size-12 rounded-full bg-paper-white/90 text-ink-black flex items-center justify-center shadow-md">
+                    <Camera className="size-6" />
+                  </div>
+                  <p className="text-xs font-medium text-paper-white font-sohne">
+                    Change cover thumbnail — 1920×1080 recommended
+                  </p>
+                  <span className="text-[11px] font-sohne text-paper-white/70">
+                    JPG, PNG, or WebP up to 10MB
+                  </span>
+                </label>
+              </div>
+              <Input
+                id="course-thumb"
+                type="url"
+                value={thumbnailUrl}
+                onChange={(e) => {
+                  setThumbnailUrl(e.target.value);
+                  markMetadataDirty();
+                }}
+                placeholder="https://images.unsplash.com/..."
+                className="h-10 text-xs rounded-inputs"
+              />
+            </div>
+
+            {/* Action Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-hairline pt-5">
+              <div className="flex items-center gap-2.5">
+                {isPending ? (
+                  <Loader2 className="size-4 text-ash-gray animate-spin" />
+                ) : isMetadataDirty ? (
+                  <span className="size-1.5 rounded-full bg-amber-500" />
+                ) : (
+                  <CheckCircle2 className="size-4 text-slate-gray" />
+                )}
+                <span className="font-sohne text-xs text-ash-gray">
+                  {isPending
+                    ? "Saving changes…"
+                    : isMetadataDirty
+                      ? "Unsaved changes — stored locally"
+                      : "All edits saved to Cursusaurus"}
+                </span>
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={handleDiscardChanges}
+                  className="ml-1 h-auto p-0 font-sohne text-xs font-medium text-slate-gray hover:text-ink-black hover:underline"
+                >
+                  Discard changes
+                </Button>
               </div>
 
-              {/* Submit Button */}
-              <div className="pt-4 border-t border-hairline flex items-center justify-end">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button
-                  type="submit"
+                  type="button"
+                  variant="outline"
                   disabled={isPending}
-                  className="rounded-full bg-ink-black text-paper-white px-6 text-xs font-medium hover:opacity-90 transition-opacity"
+                  onClick={() => handleSaveMetadata("draft")}
+                  className="flex-1 sm:flex-none rounded-full border-hairline text-ink-black font-sohne text-xs font-medium px-5"
+                >
+                  Save as draft
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => handleSaveMetadata("publish")}
+                  className="flex-1 sm:flex-none rounded-full bg-ink-black text-paper-white font-sohne text-xs font-medium px-5 shadow-sm"
                 >
                   {isPending ? (
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-1.5">
                       <Loader2 className="size-3.5 animate-spin" />
-                      <span>Saving changes...</span>
+                      <span>Saving…</span>
                     </span>
                   ) : (
-                    <span>Save course metadata</span>
+                    <span>Save & publish</span>
                   )}
                 </Button>
               </div>
-            </form>
-          </Card>
-        </section>
-      </div>
+            </div>
+          </form>
+        </TabsContent>
+
+        {/* Curriculum & Lessons */}
+        <TabsContent value="curriculum" className="outline-none">
+          <section className="flex flex-col gap-6 pt-6" aria-labelledby="curriculum-heading">
+            <div className="flex items-center justify-between border-b border-hairline pb-4">
+              <div>
+                <h2 id="curriculum-heading" className="font-serif text-2xl text-ink-black font-normal">
+                  Lessons
+                </h2>
+                <p className="text-xs text-slate-gray mt-0.5 font-sohne">
+                  {lessons.length} {lessons.length === 1 ? "lecture" : "lectures"} · {formatCurriculumDuration(totalDurationSeconds)}
+                </p>
+              </div>
+
+              <Button
+                onClick={handleOpenCreateLesson}
+                className="rounded-full bg-ink-black text-paper-white px-4 py-2 text-xs font-medium hover:opacity-90 transition-opacity flex items-center gap-1.5"
+              >
+                <Plus className="size-4" />
+                <span>Add lesson</span>
+              </Button>
+            </div>
+
+            {/* Lessons List */}
+            {lessons.length > 0 ? (
+              <div className="flex flex-col gap-3" role="list">
+                {lessons.map((lesson, index) => {
+                  const lessonNumber = (index + 1).toString().padStart(2, "0");
+
+                  return (
+                    <Card
+                      key={lesson.id}
+                      role="listitem"
+                      className="p-4 bg-paper-white rounded-[16px] border border-hairline hover:border-slate-gray/30 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      {/* Left details */}
+                      <div className="flex items-start md:items-center gap-3 flex-1 min-w-0">
+                        {/* Reorder Buttons */}
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={index === 0 || isPending}
+                            onClick={() => handleMoveLesson(index, "up")}
+                            aria-label={`Move lesson ${lesson.title} up`}
+                            className="size-6 text-slate-gray hover:text-ink-black disabled:opacity-30"
+                          >
+                            <ArrowUp className="size-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={index === lessons.length - 1 || isPending}
+                            onClick={() => handleMoveLesson(index, "down")}
+                            aria-label={`Move lesson ${lesson.title} down`}
+                            className="size-6 text-slate-gray hover:text-ink-black disabled:opacity-30"
+                          >
+                            <ArrowDown className="size-3.5" />
+                          </Button>
+                        </div>
+
+                        {/* Number & Icon */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono text-xs text-ash-gray font-medium">
+                            {lessonNumber}
+                          </span>
+                          <div className="size-8 rounded-lg bg-mist-gray flex items-center justify-center text-slate-gray">
+                            <Video className="size-4 stroke-[1.75]" />
+                          </div>
+                        </div>
+
+                        {/* Title, slug, duration, badges */}
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-medium text-ink-black font-sohne truncate">
+                              {lesson.title}
+                            </h3>
+                            {lesson.isPreview && (
+                              <Badge className="bg-mist-gray text-ink-black border border-hairline text-[10px] px-2 py-0 rounded-full font-medium">
+                                Free Preview
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs text-slate-gray mt-1 font-sohne">
+                            <span className="flex items-center gap-1">
+                              <Clock className="size-3 text-ash-gray" />
+                              {formatDuration(lesson.durationSeconds)}
+                            </span>
+                            <span>•</span>
+                            <span className="text-ash-gray">
+                              No video uploaded (metadata mode)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right actions */}
+                      <div className="flex items-center gap-1.5 self-end md:self-center shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-hairline w-full md:w-auto justify-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenEditLesson(lesson)}
+                          aria-label={`Edit ${lesson.title}`}
+                          className="size-8 text-slate-gray hover:text-ink-black"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDeleteDialog(lesson)}
+                          aria-label={`Delete ${lesson.title}`}
+                          className="size-8 text-slate-gray hover:text-destructive"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card className="p-8 bg-paper-white rounded-[20px] border border-hairline text-center flex flex-col items-center justify-center gap-3">
+                <div className="size-12 rounded-full bg-mist-gray flex items-center justify-center text-slate-gray">
+                  <Video className="size-5 stroke-[1.5]" />
+                </div>
+                <div className="max-w-sm">
+                  <h3 className="text-base font-medium text-ink-black font-serif">
+                    No curriculum lessons yet
+                  </h3>
+                  <p className="text-xs text-slate-gray mt-1 font-sohne">
+                    Organize your course syllabus with structured chapters and lectures.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleOpenCreateLesson}
+                  variant="outline"
+                  className="mt-2 rounded-full border-hairline text-ink-black text-xs font-medium px-5"
+                >
+                  <Plus className="size-3.5 mr-1.5" />
+                  <span>Add first lecture</span>
+                </Button>
+              </Card>
+            )}
+
+            {/* Add lesson dashed footer button */}
+            {lessons.length > 0 && (
+              <Button
+                onClick={handleOpenCreateLesson}
+                variant="outline"
+                className="w-full py-6 rounded-[16px] border-dashed border-slate-gray/30 hover:border-ink-black hover:bg-mist-gray/40 text-slate-gray hover:text-ink-black text-xs font-medium flex items-center justify-center gap-2 transition-all"
+              >
+                <Plus className="size-4" />
+                <span>Add another lesson to curriculum</span>
+              </Button>
+            )}
+          </section>
+        </TabsContent>
+      </Tabs>
 
       {/* Create / Edit Lesson Dialog */}
       <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
