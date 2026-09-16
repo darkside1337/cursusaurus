@@ -3,13 +3,19 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Plus, BookOpen, Clock, Layers } from "lucide-react";
+import { Search, Plus, BookOpen, MoreVertical } from "lucide-react";
 import type { CreatorCourseItem } from "@/features/courses";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CourseFilterGridProps {
   courses: CreatorCourseItem[];
@@ -47,14 +53,19 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
     [courses]
   );
 
-  const formatPrice = (cents: number) => `$${Math.round(cents / 100)}`;
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(date));
+  const formatRelativeTime = (date: Date) => {
+    const elapsedMs = new Date().getTime() - new Date(date).getTime();
+    const minutes = Math.round(elapsedMs / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.round(hours / 24);
+    if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+    const months = Math.round(days / 30);
+    if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+    const years = Math.round(months / 12);
+    return `${years} year${years === 1 ? "" : "s"} ago`;
   };
 
   return (
@@ -120,18 +131,16 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
 
                   {/* Access signal badge (peach used only for access state per DESIGN.md) */}
                   {course.isPublished && course.lessonCount >= 1 && (
-                    <Badge className="absolute top-3 left-3 bg-blush-peach text-sienna-brown px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none border-none">
+                    <Badge className="absolute top-3 left-3 bg-blush-peach text-sienna-brown px-3 py-1 rounded-full text-[11px] font-medium tracking-wide shadow-none border-none">
                       All-Access
                     </Badge>
                   )}
                 </div>
 
-                {/* Metadata & Title */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[11px] tracking-wider text-ash-gray uppercase font-medium font-sohne">
-                    Curriculum Monograph
-                  </span>
-                </div>
+                {/* Category kicker */}
+                <span className="block text-[11px] tracking-wider text-ash-gray uppercase font-medium mb-1.5 font-sohne">
+                  {course.category ?? "Curriculum Monograph"}
+                </span>
 
                 <h2 className="text-[18px] md:text-[20px] font-medium text-ink-black leading-snug line-clamp-2 mb-2 font-sohne">
                   <Link
@@ -142,46 +151,63 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
                   </Link>
                 </h2>
 
-                <div className="flex items-center gap-3 text-xs text-slate-gray font-normal font-sohne">
-                  <span className="flex items-center gap-1">
-                    <Layers className="size-3.5" />
-                    {course.lessonCount} {course.lessonCount === 1 ? "lesson" : "lessons"}
-                  </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="size-3.5" />
-                    Updated {formatDate(course.updatedAt)}
-                  </span>
-                </div>
+                <p className="text-xs text-slate-gray font-normal font-sohne">
+                  Last edited {formatRelativeTime(course.updatedAt)}
+                </p>
               </div>
 
               {/* Card Footer Actions */}
               <div className="mt-6 pt-4 border-t border-hairline flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <Badge
                     variant={course.isPublished ? "secondary" : "outline"}
-                    className={`rounded-full text-xs font-medium px-2.5 py-0.5 ${
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                       course.isPublished
                         ? "bg-mist-gray text-ink-black"
-                        : "border-slate-gray/30 text-slate-gray"
+                        : "border border-dashed border-ash-gray/60 text-ash-gray"
                     }`}
                   >
                     {course.isPublished ? "Published" : "Draft"}
                   </Badge>
-                  <span className="text-sm font-medium text-ink-black font-sohne">
-                    {formatPrice(course.priceCents)}
+                  <span className="text-xs text-slate-gray font-sohne">
+                    {course.salesCount} {course.salesCount === 1 ? "sale" : "sales"}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Button
                     variant="outline"
                     size="sm"
                     render={<Link href={`/dashboard/courses/${course.id}`} />}
-                    className="rounded-full border-ink-black/20 hover:border-ink-black text-ink-black px-4 text-xs font-medium transition-colors"
+                    className="rounded-full border-ink-black/20 hover:border-ink-black text-ink-black px-4 py-1.5 text-sm font-medium transition-colors"
                   >
                     Edit
                   </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      aria-label="More actions"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-slate-gray hover:text-ink-black hover:bg-mist-gray transition-colors"
+                    >
+                      <MoreVertical className="size-[18px]" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-paper-white border border-hairline rounded-images shadow-subtle p-1 w-44">
+                      <DropdownMenuItem
+                        render={<Link href={`/dashboard/courses/${course.id}`} />}
+                        className="text-sm text-ink-black focus:bg-mist-gray focus:text-ink-black rounded-md px-2 py-1.5"
+                      >
+                        Edit course
+                      </DropdownMenuItem>
+                      {course.isPublished && (
+                        <DropdownMenuItem
+                          render={<Link href={`/${course.slug}`} />}
+                          className="text-sm text-ink-black focus:bg-mist-gray focus:text-ink-black rounded-md px-2 py-1.5"
+                        >
+                          Public preview
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </Card>

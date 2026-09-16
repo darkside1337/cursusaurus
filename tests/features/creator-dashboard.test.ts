@@ -5,6 +5,7 @@ import {
   seedUser,
   seedCourse,
   seedLesson,
+  seedEntitlement,
   type TestDb,
 } from "../helpers";
 import {
@@ -41,10 +42,10 @@ describe("Chunk 2.2 — Creator Course List & Creation", () => {
 
       expect(data.courses).toHaveLength(0);
       expect(data.stats).toEqual({
-        totalCourses: 0,
+        totalStudents: 0,
         publishedCount: 0,
         draftCount: 0,
-        totalLessons: 0,
+        royaltiesCents: 0,
       });
     });
 
@@ -63,12 +64,12 @@ describe("Chunk 2.2 — Creator Course List & Creation", () => {
       const dataA = await listCoursesWithStatsByCreator(creatorA.id);
       expect(dataA.courses).toHaveLength(1);
       expect(dataA.courses[0].title).toBe("Creator A Course");
-      expect(dataA.stats.totalCourses).toBe(1);
+      expect(dataA.stats.publishedCount).toBe(1);
 
       const dataB = await listCoursesWithStatsByCreator(creatorB.id);
       expect(dataB.courses).toHaveLength(1);
       expect(dataB.courses[0].title).toBe("Creator B Course");
-      expect(dataB.stats.totalCourses).toBe(1);
+      expect(dataB.stats.publishedCount).toBe(1);
     });
 
     it("accurately calculates stats and lesson counts across published and draft courses", async () => {
@@ -99,10 +100,10 @@ describe("Chunk 2.2 — Creator Course List & Creation", () => {
       const data = await listCoursesWithStatsByCreator(creatorA.id);
 
       expect(data.stats).toEqual({
-        totalCourses: 3,
+        totalStudents: 0,
         publishedCount: 1,
         draftCount: 2,
-        totalLessons: 3,
+        royaltiesCents: 0,
       });
 
       // Verify course-level items
@@ -118,6 +119,59 @@ describe("Chunk 2.2 — Creator Course List & Creation", () => {
       expect(c2Item?.lessonCount).toBe(1);
       expect(c2Item?.readiness.isPurchaseEligible).toBe(false);
       expect(c2Item?.readiness.status).toBe("draft");
+    });
+
+    it("derives students, royalties, and per-course sales from entitlements", async () => {
+      const learnerA = await seedUser(testDb, { name: "Learner A" });
+      const learnerB = await seedUser(testDb, { name: "Learner B" });
+
+      const course = await seedCourse(testDb, {
+        creatorId: creatorA.id,
+        title: "Revenue Course",
+        priceCents: 4900,
+        isPublished: true,
+      });
+
+      // Learner A buys the course (counts toward sales, students, royalties)
+      await seedEntitlement(testDb, {
+        userId: learnerA.id,
+        courseId: course.id,
+        source: "purchase",
+      });
+
+      // Learner B bought it then was refunded (excluded everywhere)
+      await seedEntitlement(testDb, {
+        userId: learnerB.id,
+        courseId: course.id,
+        source: "purchase",
+        revokedAt: new Date(),
+      });
+
+      // Learner B holds an active All-Access subscription (counts as a student, not a sale or royalty)
+      await seedEntitlement(testDb, {
+        userId: learnerB.id,
+        source: "subscription",
+      });
+
+      // A purchase on another creator's course must not leak in
+      const otherCourse = await seedCourse(testDb, {
+        creatorId: creatorB.id,
+        title: "Other Creator Course",
+        priceCents: 7000,
+        isPublished: true,
+      });
+      await seedEntitlement(testDb, {
+        userId: learnerB.id,
+        courseId: otherCourse.id,
+        source: "purchase",
+      });
+
+      const data = await listCoursesWithStatsByCreator(creatorA.id);
+
+      const courseItem = data.courses.find((c) => c.id === course.id);
+      expect(courseItem?.salesCount).toBe(1);
+      expect(data.stats.totalStudents).toBe(2);
+      expect(data.stats.royaltiesCents).toBe(4900);
     });
   });
 
@@ -182,6 +236,21 @@ describe("Chunk 2.2 — Creator Course List & Creation", () => {
           priceCents: 4900,
         })
       ).rejects.toThrow("Title must be at least 3 characters");
+    });
+
+    it("rejects descriptions longer than 600 words", async () => {
+      const longDescription = Array.from({ length: 601 }, () => "word").join(
+        " "
+      );
+
+      await expect(
+        createCourse({
+          creatorId: creatorA.id,
+          title: "Word Limit Course",
+          priceCents: 4900,
+          description: longDescription,
+        })
+      ).rejects.toThrow("Description must be 600 words or fewer");
     });
   });
 });

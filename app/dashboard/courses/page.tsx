@@ -5,6 +5,14 @@ import { listCoursesWithStatsByCreator } from "@/features/courses";
 import { Button } from "@/components/ui/button";
 import { CourseFilterGrid } from "@/components/course-filter-grid";
 
+function formatRoyalties(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Math.round(cents / 100));
+}
+
 export default async function CreatorCoursesPage() {
   const session = await getServerSession();
   const userId = session?.user?.id ?? "";
@@ -50,13 +58,13 @@ export default async function CreatorCoursesPage() {
       >
         <div className="flex flex-col gap-1 pr-4 pb-4 md:pb-0">
           <span className="text-[11px] uppercase tracking-widest text-ash-gray font-medium font-sohne">
-            Total Courses
+            Total Students
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="font-serif text-[28px] md:text-[32px] leading-tight font-normal text-ink-black">
-              {stats.totalCourses}
+              {stats.totalStudents}
             </span>
-            <span className="text-xs text-slate-gray font-normal font-sohne">authored</span>
+            <span className="text-xs text-slate-gray font-normal font-sohne">enrolled</span>
           </div>
         </div>
 
@@ -86,13 +94,13 @@ export default async function CreatorCoursesPage() {
 
         <div className="flex flex-col gap-1 pl-0 md:pl-8 pt-4 md:pt-0">
           <span className="text-[11px] uppercase tracking-widest text-ash-gray font-medium font-sohne">
-            Total Lessons
+            Cumulative Royalties
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="font-serif text-[28px] md:text-[32px] leading-tight font-normal text-ink-black">
-              {stats.totalLessons}
+              {formatRoyalties(stats.royaltiesCents)}
             </span>
-            <span className="text-xs text-slate-gray font-normal font-sohne">curriculum items</span>
+            <span className="text-xs text-slate-gray font-normal font-sohne">earned</span>
           </div>
         </div>
       </section>

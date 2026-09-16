@@ -1,6 +1,6 @@
-import { eq, and, or, asc, desc } from "drizzle-orm";
+import { eq, and, or, asc, desc, isNull, inArray, count } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { courses, lessons, user } from "@/db/schema";
+import { courses, lessons, user, entitlements } from "@/db/schema";
 import type {
   Course,
   Lesson,
@@ -77,16 +77,19 @@ export async function listCoursesWithStatsByCreator(
     .where(eq(courses.creatorId, creatorId))
     .orderBy(desc(courses.createdAt));
 
-  let totalLessons = 0;
+  const creatorCourseIds = creatorCourses.map((c) => c.id);
+
   let publishedCount = 0;
   let draftCount = 0;
+
+  const salesByCourseId: Record<string, number> =
+    creatorCourseIds.length > 0 ? await countCourseSales(creatorCourseIds) : {};
 
   const coursesWithStats: CreatorCourseItem[] = await Promise.all(
     creatorCourses.map(async (course) => {
       const courseLessons = await listLessonsByCourse(course.id);
       const readiness = calculateCourseReadiness(course, courseLessons);
 
-      totalLessons += courseLessons.length;
       if (course.isPublished) {
         publishedCount++;
       } else {
@@ -97,20 +100,83 @@ export async function listCoursesWithStatsByCreator(
         ...course,
         lessonCount: courseLessons.length,
         totalDurationSeconds: readiness.totalDurationSeconds,
+        salesCount: salesByCourseId[course.id] ?? 0,
         readiness,
       };
     })
   );
 
+  const { totalStudents, royaltiesCents } = creatorCourseIds.length
+    ? await computeCreatorEngagement(creatorCourseIds)
+    : { totalStudents: 0, royaltiesCents: 0 };
+
   return {
     courses: coursesWithStats,
     stats: {
-      totalCourses: creatorCourses.length,
+      totalStudents,
       publishedCount,
       draftCount,
-      totalLessons,
+      royaltiesCents,
     },
   };
+}
+
+async function countCourseSales(
+  courseIds: string[]
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ courseId: entitlements.courseId, recordCount: count() })
+    .from(entitlements)
+    .where(
+      and(
+        eq(entitlements.source, "purchase"),
+        isNull(entitlements.revokedAt),
+        inArray(entitlements.courseId, courseIds)
+      )
+    )
+    .groupBy(entitlements.courseId);
+
+  return Object.fromEntries(
+    rows.map((r) => [r.courseId as string, Number(r.recordCount)])
+  );
+}
+
+async function computeCreatorEngagement(courseIds: string[]) {
+  const rows = await db
+    .select({
+      userId: entitlements.userId,
+      courseId: entitlements.courseId,
+      source: entitlements.source,
+      price: courses.priceCents,
+    })
+    .from(entitlements)
+    .leftJoin(courses, eq(entitlements.courseId, courses.id))
+    .where(
+      and(
+        isNull(entitlements.revokedAt),
+        or(
+          inArray(entitlements.courseId, courseIds),
+          isNull(entitlements.courseId)
+        )
+      )
+    );
+
+  const studentSet = new Set<string>();
+  let royaltiesCents = 0;
+
+  for (const row of rows) {
+    studentSet.add(row.userId);
+    if (
+      row.source === "purchase" &&
+      row.courseId &&
+      row.price !== null &&
+      courseIds.includes(row.courseId)
+    ) {
+      royaltiesCents += row.price;
+    }
+  }
+
+  return { totalStudents: studentSet.size, royaltiesCents };
 }
 
 export async function getLessonById(lessonId: string): Promise<Lesson | null> {

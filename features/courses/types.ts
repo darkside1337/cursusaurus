@@ -76,14 +76,15 @@ export interface CourseWithLessons extends Course {
 export interface CreatorCourseItem extends Course {
   lessonCount: number;
   totalDurationSeconds: number;
+  salesCount: number;
   readiness: CourseReadiness;
 }
 
 export interface CreatorDashboardStats {
-  totalCourses: number;
+  totalStudents: number;
   publishedCount: number;
   draftCount: number;
-  totalLessons: number;
+  royaltiesCents: number;
 }
 
 export interface CreatorDashboardData {
