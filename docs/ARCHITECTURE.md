@@ -60,6 +60,7 @@ Cursusaurus/
 │   ├── stripe.ts                   # Stripe SDK instance
 │   ├── auth.ts                     # Better-Auth instance + getServerSession()
 │   ├── auth-client.ts              # Better-Auth browser client
+│   ├── callback-url.ts             # Open-redirect-safe callbackUrl sanitizer
 │   └── utils.ts                    # cn() helper
 ├── config/
 │   └── env.ts                      # T3 env validation (server + client vars)
@@ -73,6 +74,7 @@ Cursusaurus/
 │   │   ├── db.ts                   # PGlite in-memory DB + migrator + cleanDb()
 │   │   └── fixtures.ts             # Shared fixtures (users, courses, entitlements)
 │   ├── features/
+│   │   ├── callback-url.test.ts
 │   │   ├── creator-dashboard.test.ts
 │   │   ├── curriculum-studio.test.ts
 │   │   ├── lessons.test.ts
@@ -81,6 +83,7 @@ Cursusaurus/
 │   ├── entitlements/hasAccess.test.ts
 │   └── smoke.test.ts
 ├── PRODUCT.md                      # Product positioning, principles, audience
+├── proxy.ts                        # Next.js proxy — eager auth gate (cookie-presence)
 ├── .plans/                         # Implementation plans shared with the workspace
 └── docs/
     ├── PRD.md                      # Product spec, schema, invariants, testing decisions
@@ -97,6 +100,7 @@ Cursusaurus/
 - `components/ui/` holds shadcn/ui primitives and is the only strictly domain-agnostic layer: no imports from `features/` or `app/`. Style them via design tokens in `globals.css`; don't hand-edit generated primitives unless fixing a genuine primitive bug.
 - `app/api/` Route Handlers verify auth, call into `features/`, return HTTP responses. No inline business logic.
 - Server Actions are used only for authenticated user-initiated form mutations (course create/edit, progress updates). All external API surface (webhooks, polling, signed URLs) is Route Handlers.
+- `proxy.ts` is an eager, cookie-presence auth gate for authenticated areas (`/dashboard` today; `/learn`, `/library`, `/billing` in later phases). It is **optimistic only** — it never runs DB queries and is not the security boundary. Authoritative session checks live in layouts, Server Actions, and Route Handlers (see §8); `/api/auth/**` (OAuth callback), the marketplace, and `/login` pass through untouched.
 
 ---
 
@@ -232,7 +236,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 | Concern             | Approach                                                                      |
 | ------------------- | ----------------------------------------------------------------------------- |
-| Auth                | Better-Auth session cookies                                                   |
+| Auth                | Better-Auth session cookies; eager cookie-presence `proxy.ts` redirect for authenticated areas (optimistic — full session validation runs per page/action) |
 | Payment             | Stripe-hosted Checkout, webhook signature verification                        |
 | Video access        | `hasAccess()` check on every signed-URL request — no cached client-side state |
 | Signed URL lifetime | 60-second presigned Supabase Storage GET URLs                                 |
@@ -244,7 +248,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 - **Framework**: Vitest, confirmed. Unit + feature tests run against an **in-memory PGlite** database (`@electric-sql/pglite`) — `tests/helpers/db.ts` instantiates PGlite, applies the real Drizzle migrations from `./drizzle`, and exposes a `cleanDb()` helper; no external Postgres needed.
 - **Seams**: feature/query boundaries driving real queries against PGlite, and Route Handler boundaries on the request-to-database path (external HTTP services — Stripe, Supabase — are not mocked in unit tests; Playwright (`tests/e2e`) covers browser flows).
-- **Current coverage** (see `tests/`): `entitlements/hasAccess.test.ts` (full truth table: purchase-only, subscription-only, trialing, both simultaneously, canceled-with-both, past_due, refunded), `features/public-catalog.test.ts`, `features/creator-dashboard.test.ts`, `features/curriculum-studio.test.ts`, `features/lessons.test.ts`, plus a smoke test.
+- **Current coverage** (see `tests/`): `entitlements/hasAccess.test.ts` (full truth table: purchase-only, subscription-only, trialing, both simultaneously, canceled-with-both, past_due, refunded), `features/public-catalog.test.ts`, `features/creator-dashboard.test.ts`, `features/curriculum-studio.test.ts`, `features/lessons.test.ts`, `features/callback-url.test.ts` (open-redirect sanitizer), plus a smoke test. The `proxy.ts` gate itself is verified at build time and via browser flows, not unit-tested.
 - **Priority order for upcoming phases**: Stripe webhook handler tests → video signed-url handler tests → order-status handler tests.
 - See `docs/PRD.md` for the full entitlement test matrix required before any Stripe integration work begins.
 
