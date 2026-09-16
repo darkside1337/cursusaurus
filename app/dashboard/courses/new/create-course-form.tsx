@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { createCourseAction } from "./actions";
 import { generateSlug } from "@/features/courses/slug";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,12 @@ export function CreateCourseForm() {
 
   const autoSlug = generateSlug(title);
   const displaySlug = customSlug || autoSlug;
+
+  useEffect(() => {
+    if (state?.error) {
+      toast.error(state.error);
+    }
+  }, [state?.error]);
 
   return (
     <div className="w-full max-w-[720px] mx-auto py-8 md:py-12 flex flex-col gap-8">
@@ -54,17 +61,6 @@ export function CreateCourseForm() {
           Author a deliberate, craft-focused masterclass for the Cursusaurus catalog.
         </p>
       </header>
-
-      {/* Error Banner */}
-      {state?.error && (
-        <div
-          role="alert"
-          className="flex items-start gap-3 p-4 rounded-inputs bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-        >
-          <AlertCircle className="size-5 shrink-0 mt-0.5" />
-          <p className="font-sohne font-medium">{state.error}</p>
-        </div>
-      )}
 
       {/* Main Formulation Form */}
       <form action={formAction} className="flex flex-col gap-6">

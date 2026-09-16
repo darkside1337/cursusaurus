@@ -12,12 +12,11 @@ import {
   Plus,
   Video,
   Clock,
-  CheckCircle2,
   AlertTriangle,
-  AlertCircle,
   Loader2,
   Eye,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Course, Lesson, CourseReadiness } from "@/features/courses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,17 +110,10 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   const [lessonMinutes, setLessonMinutes] = useState(0);
   const [lessonSeconds, setLessonSeconds] = useState(0);
   const [lessonIsPreview, setLessonIsPreview] = useState(false);
-  const [lessonFormError, setLessonFormError] = useState<string | null>(null);
 
   // Delete Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingLesson, setDeletingLesson] = useState<Lesson | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  // Feedback Notification State
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
-    null
-  );
 
   const [isPending, startTransition] = useTransition();
 
@@ -137,7 +129,6 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   // Toggle Publication
   const handleTogglePublish = (nextPublished: boolean) => {
     startTransition(async () => {
-      setFeedback(null);
       const res = await toggleCoursePublishAction(course.id, nextPublished);
       if (res.success && res.data) {
         setCourse((prev) => ({
@@ -145,19 +136,15 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
           isPublished: nextPublished,
           readiness: res.data!.readiness,
         }));
-        setFeedback({
-          type: "success",
-          message: nextPublished
+        toast.success(
+          nextPublished
             ? lessons.length === 0
               ? "Course published as Coming Soon (add at least 1 lesson to enable purchasing)."
               : "Course published! It is now live in the catalog."
-            : "Course unpublished and switched to draft mode.",
-        });
+            : "Course unpublished and switched to draft mode."
+        );
       } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Failed to update publication status",
-        });
+        toast.error(res.error || "Failed to update publication status");
       }
     });
   };
@@ -165,13 +152,11 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   // Save Metadata
   const handleSaveMetadata = (e: React.FormEvent) => {
     e.preventDefault();
-    setFeedback(null);
 
     if (priceDollars < 19 || priceDollars > 199) {
-      setFeedback({
-        type: "error",
-        message: "Price must be constrained between $19 and $199 USD per PRD specifications.",
-      });
+      toast.error(
+        "Price must be constrained between $19 and $199 USD per PRD specifications."
+      );
       return;
     }
 
@@ -196,14 +181,10 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
         setCategory(res.data.category ?? "Design");
         setPriceDollars(Math.round(res.data.priceCents / 100));
         setThumbnailUrl(res.data.thumbnailUrl ?? "");
-        setFeedback({
-          type: "success",
-          message: "Course metadata saved successfully.",
-        });
+        toast.success("Course metadata saved successfully.");
       } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Failed to save course metadata",
+        toast.error(res.error || "Failed to save course metadata", {
+          description: "Your changes were not saved.",
         });
       }
     });
@@ -218,7 +199,6 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
     setLessonMinutes(5);
     setLessonSeconds(0);
     setLessonIsPreview(lessons.length === 0); // Default first lesson as preview
-    setLessonFormError(null);
     setLessonDialogOpen(true);
   };
 
@@ -232,22 +212,19 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
     setLessonMinutes(Math.floor(totalSecs / 60));
     setLessonSeconds(totalSecs % 60);
     setLessonIsPreview(lesson.isPreview);
-    setLessonFormError(null);
     setLessonDialogOpen(true);
   };
 
   // Submit Lesson Form (Create or Edit)
   const handleSaveLesson = () => {
     if (!lessonTitle.trim() || lessonTitle.trim().length < 3) {
-      setLessonFormError("Lesson title must be at least 3 characters long.");
+      toast.error("Lesson title must be at least 3 characters long.");
       return;
     }
 
     const durationSeconds = Math.max(0, lessonMinutes * 60 + lessonSeconds);
 
     startTransition(async () => {
-      setLessonFormError(null);
-
       if (editingLesson) {
         // Edit existing lesson
         const res = await updateLessonAction(course.id, editingLesson.id, {
@@ -263,12 +240,9 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
             prev.map((l) => (l.id === editingLesson.id ? res.data! : l))
           );
           setLessonDialogOpen(false);
-          setFeedback({
-            type: "success",
-            message: `Updated "${res.data.title}".`,
-          });
+          toast.success(`Updated "${res.data.title}".`);
         } else {
-          setLessonFormError(res.error || "Failed to update lesson.");
+          toast.error(res.error || "Failed to update lesson.");
         }
       } else {
         // Create new lesson
@@ -283,12 +257,9 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
         if (res.success && res.data) {
           setLessons((prev) => [...prev, res.data!]);
           setLessonDialogOpen(false);
-          setFeedback({
-            type: "success",
-            message: `Added "${res.data.title}" to curriculum.`,
-          });
+          toast.success(`Added "${res.data.title}" to curriculum.`);
         } else {
-          setLessonFormError(res.error || "Failed to add lesson.");
+          toast.error(res.error || "Failed to add lesson.");
         }
       }
     });
@@ -297,7 +268,6 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   // Open Delete Confirmation Dialog
   const handleOpenDeleteDialog = (lesson: Lesson) => {
     setDeletingLesson(lesson);
-    setDeleteError(null);
     setDeleteDialogOpen(true);
   };
 
@@ -306,19 +276,15 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
     if (!deletingLesson) return;
 
     startTransition(async () => {
-      setDeleteError(null);
       const res = await deleteLessonAction(course.id, deletingLesson.id);
 
       if (res.success) {
         setLessons((prev) => prev.filter((l) => l.id !== deletingLesson.id));
         setDeleteDialogOpen(false);
         setDeletingLesson(null);
-        setFeedback({
-          type: "success",
-          message: `Deleted "${deletingLesson.title}".`,
-        });
+        toast.success(`Deleted "${deletingLesson.title}".`);
       } else {
-        setDeleteError(res.error || "Failed to delete lesson.");
+        toast.error(res.error || "Failed to delete lesson.");
       }
     });
   };
@@ -343,10 +309,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
       } else {
         // Revert on failure
         setLessons(lessons);
-        setFeedback({
-          type: "error",
-          message: res.error || "Failed to reorder lessons",
-        });
+        toast.error(res.error || "Failed to reorder lessons");
       }
     });
   };
@@ -434,25 +397,6 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                 Learners can discover this monograph in the catalog, but purchase checkout is disabled until at least one curriculum lecture is added.
               </p>
             </div>
-          </div>
-        )}
-
-        {/* Global Feedback Banner */}
-        {feedback && (
-          <div
-            role="alert"
-            className={`flex items-start gap-3 p-4 rounded-inputs border text-sm ${
-              feedback.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                : "bg-destructive/10 border-destructive/20 text-destructive"
-            }`}
-          >
-            {feedback.type === "success" ? (
-              <CheckCircle2 className="size-5 shrink-0 mt-0.5 text-emerald-700" />
-            ) : (
-              <AlertCircle className="size-5 shrink-0 mt-0.5" />
-            )}
-            <p className="font-sohne font-medium">{feedback.message}</p>
           </div>
         )}
       </header>
@@ -793,16 +737,6 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
             </DialogDescription>
           </DialogHeader>
 
-          {lessonFormError && (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 p-3 rounded-inputs bg-destructive/10 border border-destructive/20 text-destructive text-xs"
-            >
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
-              <span>{lessonFormError}</span>
-            </div>
-          )}
-
           <div className="flex flex-col gap-4 py-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="modal-lesson-title">Lesson Title</Label>
@@ -925,19 +859,6 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
               This action cannot be reversed.
             </AlertDialogDescription>
           </AlertDialogHeader>
-
-          {deleteError && (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 p-3 rounded-inputs bg-destructive/10 border border-destructive/20 text-destructive text-xs"
-            >
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
-              <div className="flex flex-col">
-                <span className="font-semibold">Deletion Invariant Safeguard</span>
-                <span className="mt-0.5">{deleteError}</span>
-              </div>
-            </div>
-          )}
 
           <AlertDialogFooter className="border-t border-hairline pt-4 mt-2">
             <Button

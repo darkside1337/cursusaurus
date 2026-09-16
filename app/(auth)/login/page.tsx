@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,11 +51,9 @@ export default function LoginPage() {
   const [loadingProvider, setLoadingProvider] = useState<
     "google" | "github" | null
   >(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSignIn = async (provider: "google" | "github") => {
     try {
-      setErrorMessage(null);
       setLoadingProvider(provider);
       await authClient.signIn.social({
         provider,
@@ -62,7 +61,7 @@ export default function LoginPage() {
       });
     } catch (err) {
       setLoadingProvider(null);
-      setErrorMessage(
+      toast.error(
         err instanceof Error ? err.message : "Failed to initiate sign in"
       );
     }
@@ -92,17 +91,6 @@ export default function LoginPage() {
         <p className="text-caption text-slate-gray max-w-[280px] leading-relaxed mb-7">
           Deliberate, quiet learning for enrolled fellows & monograph subscribers.
         </p>
-
-        {errorMessage && (
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="w-full mb-4 p-3 rounded-xl bg-destructive/10 text-destructive text-sm flex items-center gap-2 text-left"
-          >
-            <AlertCircle className="size-4 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
 
         <div className="w-full flex flex-col gap-3">
           {/* Google */}

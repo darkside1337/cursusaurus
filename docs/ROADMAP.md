@@ -75,6 +75,7 @@ See `docs/PRD.md` for product requirements and pricing decisions, `docs/ARCHITEC
 - [x] Published course and lesson edits take effect immediately, including for existing purchasers
 - [x] Stable course and lesson IDs preserve references and progress when slugs or display metadata change
 - [x] Define behavior for deleting lessons that have existing learner progress
+- [x] Shadcn Sonner feedback layer — `@shadcn/sonner` + root `<Toaster />` replace inline success/error banners across curriculum studio, create-course, and login
 
 ### Public catalog
 
