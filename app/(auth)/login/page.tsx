@@ -69,7 +69,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col w-full items-center justify-center font-sohne">
-      <Card className="w-full max-w-[420px] bg-paper-white rounded-cards p-6 sm:p-11 shadow-subtle border border-black/[0.05] flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
+      <Card className="w-full max-w-[420px] bg-paper-white rounded-cards p-8 sm:p-11 shadow-subtle border border-black/[0.05] flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
         {/* Blush-peach glow per Stitch design spec */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-blush-peach/30 rounded-full blur-3xl pointer-events-none" />
 
@@ -82,7 +82,7 @@ export default function LoginPage() {
           <span className="w-1.5 h-1.5 rounded-full bg-sienna-brown/40" />
         </div>
 
-        <h1 className="font-signifier text-[32px] font-normal text-ink-black tracking-tight leading-tight">
+        <h1 className="font-signifier text-[30px] font-normal text-ink-black tracking-tight leading-tight">
           Cursusaurus
         </h1>
         <p className="text-[22px] font-medium text-ink-black mt-3 mb-1 tracking-tight">
@@ -99,7 +99,7 @@ export default function LoginPage() {
             variant="outline"
             disabled={loadingProvider !== null}
             onClick={() => handleSignIn("google")}
-            className="w-full h-12 rounded-buttons bg-paper-white hover:bg-mist-gray text-ink-black text-caption font-medium flex items-center justify-center gap-3 transition-all border border-black/[0.08] shadow-subtle hover:shadow-subtle-2 active:scale-[0.99]"
+            className="w-full h-12 rounded-buttons bg-paper-white hover:bg-mist-gray text-ink-black text-caption font-medium flex items-center justify-center gap-3 transition-all shadow-subtle hover:shadow-subtle-2 active:scale-[0.99]"
           >
             {loadingProvider === "google" ? (
               <Loader2 className="size-[18px] animate-spin shrink-0 text-slate-gray" />
