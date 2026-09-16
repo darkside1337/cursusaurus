@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { lessonProgress } from "@/db/schema";
+import { getLessonBySlug } from "@/features/courses";
 import { updateProgressSchema } from "./schemas";
 import type { UpdateProgressInput, LessonProgress } from "./types";
 
@@ -43,12 +44,20 @@ export async function updateLessonProgress(
     return updated;
   }
 
+  const lesson = await getLessonBySlug(validated.courseId, validated.lessonSlug);
+  if (!lesson) {
+    throw new Error(
+      `Cannot record progress for unknown lesson "${validated.lessonSlug}" in course "${validated.courseId}"`
+    );
+  }
+
   const [created] = await db
     .insert(lessonProgress)
     .values({
       id: crypto.randomUUID(),
       userId: validated.userId,
       courseId: validated.courseId,
+      lessonId: lesson.id,
       lessonSlug: validated.lessonSlug,
       completed: validated.completed ?? false,
       lastPositionSeconds: validated.lastPositionSeconds ?? 0,

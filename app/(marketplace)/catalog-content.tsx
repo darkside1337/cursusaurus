@@ -23,6 +23,34 @@ export const CATALOG_CATEGORIES = [
 
 export type CatalogCategory = (typeof CATALOG_CATEGORIES)[number];
 
+export function filterCatalogCourses(
+  courses: CatalogCourseItem[],
+  activeCategory: string,
+  searchQuery: string
+): CatalogCourseItem[] {
+  return courses.filter((course) => {
+    // Category filter
+    if (activeCategory !== "All" && course.category !== activeCategory) {
+      return false;
+    }
+
+    // Text search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const matchTitle = course.title.toLowerCase().includes(query);
+      const matchDesc = course.description?.toLowerCase().includes(query) ?? false;
+      const matchCreator = course.creatorName?.toLowerCase().includes(query) ?? false;
+      const matchCategory = course.category?.toLowerCase().includes(query) ?? false;
+
+      if (!matchTitle && !matchDesc && !matchCreator && !matchCategory) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 export function CatalogGridSkeleton() {
   return (
     <div
@@ -67,29 +95,10 @@ export function CatalogContent({
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const filteredCourses = useMemo(() => {
-    return courses.filter((course) => {
-      // Category filter
-      if (activeCategory !== "All" && course.category !== activeCategory) {
-        return false;
-      }
-
-      // Text search filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const matchTitle = course.title.toLowerCase().includes(query);
-        const matchDesc = course.description?.toLowerCase().includes(query) ?? false;
-        const matchCreator = course.creatorName?.toLowerCase().includes(query) ?? false;
-        const matchCategory = course.category?.toLowerCase().includes(query) ?? false;
-
-        if (!matchTitle && !matchDesc && !matchCreator && !matchCategory) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [courses, activeCategory, searchQuery]);
+  const filteredCourses = useMemo(
+    () => filterCatalogCourses(courses, activeCategory, searchQuery),
+    [courses, activeCategory, searchQuery]
+  );
 
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-14 flex flex-col gap-10 md:gap-14">

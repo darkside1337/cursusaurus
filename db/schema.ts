@@ -99,7 +99,9 @@ export const lessonProgress = pgTable("lesson_progress", {
   courseId: text("course_id")
     .notNull()
     .references(() => courses.id),
-  lessonId: text("lesson_id").references(() => lessons.id),
+  lessonId: text("lesson_id")
+    .notNull()
+    .references(() => lessons.id),
   lessonSlug: text("lesson_slug").notNull(),
   completed: boolean("completed").default(false).notNull(),
   lastPositionSeconds: integer("last_position_seconds").default(0).notNull(),

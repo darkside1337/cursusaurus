@@ -29,6 +29,13 @@
       "when": 1789572756038,
       "tag": "0003_whole_sugar_man",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789593379337,
+      "tag": "0004_locked_lesson_progress",
+      "breakpoints": true
     }
   ]
 }

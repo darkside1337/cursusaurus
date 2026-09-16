@@ -140,7 +140,8 @@ describe("Chunk 2.1 — Lesson Domain & Readiness Invariants", () => {
 
       expect(updated).not.toBeNull();
       expect(updated?.title).toBe("Updated Title");
-      expect(updated?.slug).toBe("updated-title");
+      // Slug is preserved on title-only edits; explicit slugs still apply via updateLesson
+      expect(updated?.slug).toBe(lesson.slug);
       expect(updated?.durationSeconds).toBe(600);
       expect(updated?.isPreview).toBe(true);
       expect(updated?.orderIndex).toBe(lesson.orderIndex);

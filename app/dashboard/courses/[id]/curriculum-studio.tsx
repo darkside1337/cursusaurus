@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -92,6 +92,9 @@ function formatCurriculumDuration(totalSeconds: number): string {
 export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumStudioProps) {
   const [course, setCourse] = useState(initialCourse);
   const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
+
+  // Server-confirmed lesson order; used to revert optimistic reorders on failure.
+  const serverLessonsRef = useRef<Lesson[]>(initialLessons);
 
   // Metadata Form State
   const [title, setTitle] = useState(initialCourse.title);
@@ -236,9 +239,11 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
         });
 
         if (res.success && res.data) {
-          setLessons((prev) =>
-            prev.map((l) => (l.id === editingLesson.id ? res.data! : l))
+          const updatedLessons = lessons.map((l) =>
+            l.id === editingLesson.id ? res.data! : l
           );
+          serverLessonsRef.current = updatedLessons;
+          setLessons(updatedLessons);
           setLessonDialogOpen(false);
           toast.success(`Updated "${res.data.title}".`);
         } else {
@@ -255,7 +260,9 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
         });
 
         if (res.success && res.data) {
-          setLessons((prev) => [...prev, res.data!]);
+          const appendedLessons = [...lessons, res.data!];
+          serverLessonsRef.current = appendedLessons;
+          setLessons(appendedLessons);
           setLessonDialogOpen(false);
           toast.success(`Added "${res.data.title}" to curriculum.`);
         } else {
@@ -279,7 +286,10 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
       const res = await deleteLessonAction(course.id, deletingLesson.id);
 
       if (res.success) {
-        setLessons((prev) => prev.filter((l) => l.id !== deletingLesson.id));
+        serverLessonsRef.current = serverLessonsRef.current.filter(
+          (l) => l.id !== deletingLesson.id
+        );
+        setLessons(serverLessonsRef.current);
         setDeleteDialogOpen(false);
         setDeletingLesson(null);
         toast.success(`Deleted "${deletingLesson.title}".`);
@@ -305,10 +315,11 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
       const lessonIds = newLessons.map((l) => l.id);
       const res = await reorderLessonsAction(course.id, lessonIds);
       if (res.success && res.data) {
+        serverLessonsRef.current = res.data;
         setLessons(res.data);
       } else {
-        // Revert on failure
-        setLessons(lessons);
+        // Revert on failure to last server-confirmed order
+        setLessons(serverLessonsRef.current);
         toast.error(res.error || "Failed to reorder lessons");
       }
     });

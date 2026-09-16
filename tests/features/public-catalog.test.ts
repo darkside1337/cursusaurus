@@ -14,7 +14,7 @@ import {
   getCourseWithLessons,
 } from "@/features/courses";
 import { CourseCard } from "@/components/course-card";
-import { CatalogGridSkeleton } from "@/app/(marketplace)/catalog-content";
+import { CatalogGridSkeleton, filterCatalogCourses } from "@/app/(marketplace)/catalog-content";
 
 let testDb: TestDb;
 
@@ -107,50 +107,50 @@ describe("Chunk 2.4 — Public Catalog Experience", () => {
       expect(found?.readiness.isPurchaseEligible).toBe(false);
     });
 
-    it("filters catalog courses by subject category", async () => {
-      await seedCourse(testDb, {
+    it("client-side category filter narrows published catalog", async () => {
+      const design = await seedCourse(testDb, {
         creatorId: creator1.id,
         title: "Design Systems Masterclass",
         isPublished: true,
         category: "Design",
       });
-
-      await seedCourse(testDb, {
+      const code = await seedCourse(testDb, {
         creatorId: creator2.id,
         title: "TypeScript Deep Dive",
         isPublished: true,
         category: "Code",
       });
-
-      await seedCourse(testDb, {
+      const marketing = await seedCourse(testDb, {
         creatorId: creator1.id,
         title: "Product Marketing Foundations",
         isPublished: true,
         category: "Marketing",
       });
 
-      const designOnly = await listPublishedCourses({ category: "Design" });
-      expect(designOnly).toHaveLength(1);
-      expect(designOnly[0].title).toBe("Design Systems Masterclass");
+      const catalog = await listPublishedCourses();
 
-      const codeOnly = await listPublishedCourses({ category: "Code" });
-      expect(codeOnly).toHaveLength(1);
-      expect(codeOnly[0].title).toBe("TypeScript Deep Dive");
+      const designOnly = filterCatalogCourses(catalog, "Design", "");
+      expect(designOnly.map((c) => c.id)).toEqual([design.id]);
 
-      const allCourses = await listPublishedCourses({ category: "All" });
+      const codeOnly = filterCatalogCourses(catalog, "Code", "");
+      expect(codeOnly.map((c) => c.id)).toEqual([code.id]);
+
+      const allCourses = filterCatalogCourses(catalog, "All", "");
       expect(allCourses).toHaveLength(3);
+      const noMatch = filterCatalogCourses(catalog, "Photography", "");
+      expect(noMatch).toHaveLength(0);
+      expect(marketing.id).toBeDefined();
     });
 
-    it("filters catalog courses by search query", async () => {
-      await seedCourse(testDb, {
+    it("client-side search filter matches title, description, creator, and category", async () => {
+      const typography = await seedCourse(testDb, {
         creatorId: creator1.id,
         title: "Architectural Principles in Typography",
         description: "A comprehensive monograph on font geometries.",
         isPublished: true,
         category: "Design",
       });
-
-      await seedCourse(testDb, {
+      const compiler = await seedCourse(testDb, {
         creatorId: creator2.id,
         title: "Compiler Construction in Rust",
         description: "Building ASTs and bytecodes from scratch.",
@@ -158,15 +158,21 @@ describe("Chunk 2.4 — Public Catalog Experience", () => {
         category: "Code",
       });
 
-      const searchTitle = await listPublishedCourses({ search: "typography" });
-      expect(searchTitle).toHaveLength(1);
-      expect(searchTitle[0].title).toContain("Typography");
+      const catalog = await listPublishedCourses();
 
-      const searchDesc = await listPublishedCourses({ search: "bytecode" });
-      expect(searchDesc).toHaveLength(1);
-      expect(searchDesc[0].title).toContain("Compiler");
+      const searchTitle = filterCatalogCourses(catalog, "All", "typography");
+      expect(searchTitle.map((c) => c.id)).toEqual([typography.id]);
 
-      const searchNone = await listPublishedCourses({ search: "nonexistent keyword" });
+      const searchDesc = filterCatalogCourses(catalog, "All", "bytecode");
+      expect(searchDesc.map((c) => c.id)).toEqual([compiler.id]);
+
+      const searchCreator = filterCatalogCourses(catalog, "All", "alice");
+      expect(searchCreator.every((c) => c.creatorName === "Alice Masterclass")).toBe(true);
+
+      const searchCategory = filterCatalogCourses(catalog, "All", "code");
+      expect(searchCategory.map((c) => c.id)).toEqual([compiler.id]);
+
+      const searchNone = filterCatalogCourses(catalog, "All", "nonexistent keyword");
       expect(searchNone).toHaveLength(0);
     });
   });

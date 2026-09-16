@@ -32,15 +32,7 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
   return course ?? null;
 }
 
-export async function listPublishedCourses(filters?: {
-  category?: string;
-  search?: string;
-}): Promise<CatalogCourseItem[]> {
-  const conditions = [eq(courses.isPublished, true)];
-  if (filters?.category && filters.category !== "All") {
-    conditions.push(eq(courses.category, filters.category));
-  }
-
+export async function listPublishedCourses(): Promise<CatalogCourseItem[]> {
   const rows = await db
     .select({
       course: courses,
@@ -48,7 +40,7 @@ export async function listPublishedCourses(filters?: {
     })
     .from(courses)
     .leftJoin(user, eq(courses.creatorId, user.id))
-    .where(and(...conditions))
+    .where(eq(courses.isPublished, true))
     .orderBy(desc(courses.createdAt));
 
   const items: CatalogCourseItem[] = await Promise.all(
@@ -65,16 +57,6 @@ export async function listPublishedCourses(filters?: {
       };
     })
   );
-
-  if (filters?.search && filters.search.trim()) {
-    const q = filters.search.toLowerCase().trim();
-    return items.filter(
-      (c) =>
-        c.title.toLowerCase().includes(q) ||
-        (c.description?.toLowerCase().includes(q) ?? false) ||
-        c.slug.toLowerCase().includes(q)
-    );
-  }
 
   return items;
 }

@@ -102,8 +102,6 @@ export async function updateCourse(
 
   if (validated.slug !== undefined) {
     updateValues.slug = await resolveUniqueCourseSlug(validated.slug, courseId);
-  } else if (validated.title !== undefined) {
-    updateValues.slug = await resolveUniqueCourseSlug(generateSlug(validated.title), courseId);
   }
 
   const [course] = await db
@@ -197,12 +195,6 @@ export async function updateLesson(
     updateValues.slug = await resolveUniqueLessonSlug(
       existing.courseId,
       validated.slug,
-      lessonId
-    );
-  } else if (validated.title !== undefined) {
-    updateValues.slug = await resolveUniqueLessonSlug(
-      existing.courseId,
-      generateSlug(validated.title),
       lessonId
     );
   }
