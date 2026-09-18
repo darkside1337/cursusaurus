@@ -17,7 +17,8 @@ export type SubscriptionStatus =
 export interface CreateSubscriptionCheckoutInput {
   userId: string;
   customerEmail?: string;
-  priceId: string;
+  stripeCustomerId?: string;
+  priceId?: string;
   successUrl: string;
   cancelUrl: string;
 }

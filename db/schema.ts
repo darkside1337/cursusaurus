@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, boolean, integer, index, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, bigint, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "@/lib/db/schema/auth-schema";
 
 export * from "@/lib/db/schema/auth-schema";
@@ -55,24 +56,38 @@ export const purchases = pgTable("purchases", {
     .references(() => courses.id),
   stripePaymentIntentId: text("stripe_payment_intent_id").notNull().unique(),
   stripeSessionId: text("stripe_session_id").unique(),
+  pricePaidCents: integer("price_paid_cents"),
   status: text("status").notNull(),
   purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
 });
 
-export const subscriptions = pgTable("subscriptions", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
-  stripeCustomerId: text("stripe_customer_id").notNull(),
-  status: text("status").notNull(),
-  currentPeriodEnd: timestamp("current_period_end").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
+    stripeCustomerId: text("stripe_customer_id").notNull(),
+    stripeSessionId: text("stripe_session_id"),
+    status: text("status").notNull(),
+    currentPeriodEnd: timestamp("current_period_end").notNull(),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+    trialEndsAt: timestamp("trial_ends_at"),
+    lastEventEpoch: bigint("last_event_epoch", { mode: "number" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("subscriptions_stripe_session_id_idx").on(table.stripeSessionId),
+    uniqueIndex("subscriptions_one_active_user").on(table.userId).where(
+      sql`${table.status} IN ('trialing','active')`
+    ),
+  ]
+);
 
 export const entitlements = pgTable(
   "entitlements",
@@ -115,4 +130,14 @@ export const processedStripeEvents = pgTable("processed_stripe_events", {
   eventId: text("event_id").notNull().unique(),
   eventType: text("event_type").notNull(),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
+});
+
+export const reconcileAttempts = pgTable("reconcile_attempts", {
+  stripeSessionId: text("stripe_session_id").primaryKey(),
+  attemptedAt: timestamp("attempted_at").defaultNow().notNull(),
+});
+
+export const refundTombstones = pgTable("refund_tombstones", {
+  stripePaymentIntentId: text("stripe_payment_intent_id").primaryKey(),
+  refundedAt: timestamp("refunded_at").defaultNow().notNull(),
 });

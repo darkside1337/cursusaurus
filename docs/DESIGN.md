@@ -59,6 +59,13 @@ _Adapted from the Steep design system (peach/ink palette, type scale, spacing) �
 | heading-lg | 64px | 1.3         | -0.96px        | `--text-heading-lg` |
 | display    | 90px | 1.3         | -2.25px        | `--text-display`    |
 
+### Editorial Price Formatting
+
+Price presentation follows editorial publishing conventions via `lib/format-price.ts`:
+- **Whole-dollar amounts omit decimals**: e.g., `$49` (one-time purchase), `$15/mo` (All-Access Pass).
+- **Fractional amounts display two decimals**: e.g., `$19.99`.
+- Clean typography: never include trailing `.00` on whole dollar figures, avoiding visual noise across cards and pricing panels.
+
 ## Tokens — Spacing & Shapes
 
 **Base unit:** 4px · **Density:** comfortable
@@ -141,6 +148,40 @@ Filled: #17191c background, white text, 9999px radius. Ghost: transparent, #1719
 **Role:** Site navigation (Browse, Pricing, My Library, Dashboard)
 
 Transparent top bar, no shadow, no border. Logo left, nav center, auth/CTA right (Sign in + filled pill "Get All-Access" when logged out; avatar + "My Library" when logged in).
+
+### Billing & Subscriptions View
+
+**Role:** Self-service subscription management and purchase ledger (`/billing`)
+
+Max-width 780px centered within 1200px page canvas.
+- **Eyebrow & Heading**: Ash Gray uppercase tracking eyebrow paired with user email (`font-mono text-xs`), followed by Signifier 36px title and Slate Gray description.
+- **Perpetual Ownership Guarantee Card**: Hairline border, Paper White surface, featuring a Blush Peach badge with Sienna Brown shield icon explaining standalone purchase permanence.
+- **Subscription Lifecycle Card**: Dynamic card reflecting current subscription state:
+  - *Active*: Blush Peach badge, renewal cadence, direct CTA to Stripe Customer Portal.
+  - *Trialing*: Blush Peach "7-Day Free Trial" badge, trial end date, Customer Portal CTA.
+  - *Past Due*: Sienna Brown "Payment Past Due" badge, urgent notice, Customer Portal payment method update CTA.
+  - *Inactive*: Muted card detailing All-Access benefits with "Start 7-Day Free Trial" primary action.
+- **Purchased Courses Ledger**: Clean list of standalone perpetual licenses displaying course title, link, purchase date, and exact price paid (`pricePaidCents`).
+
+### Order Confirmation & Polling View
+
+**Role:** Post-checkout polling and fulfillment confirmation (`/checkout/success`)
+
+Centered card (max-width 480px) on Paper White with subtle shadow and hairline border.
+- **State A (Processing)**: Animated loading spinner with reassuring copy while polling `/api/order-status/[sessionId]`.
+- **State B (Access Confirmed)**: Course or All-Access Pass summary card with green checkmark or Blush Peach badge, clear access confirmation, and primary action linking directly to `/learn` or the course catalog.
+- **State C (Delayed / Support)**: Calming recovery state explaining delayed webhook delivery with a manual "Check status again" button and support link.
+
+### Course Detail Enrollment Panel
+
+**Role:** Dual pricing selection on course detail pages (`/[slug]`)
+
+Sticky right column on desktop (lg), full-width stacked on mobile.
+- **One-Time Purchase Card**: Mist Gray / Paper White surface showing standalone price ($X) and lifetime access guarantee.
+- **All-Access Pass Featured Card**: Blush Peach background (`#fbe1d1`), Sienna Brown typography (`#5d2a1a`), 7-day free trial callout, and monthly rate ($15/mo).
+- **Overlap States**:
+  - *Owned*: Displays "You own this course" badge with direct "Go to course" button.
+  - *Subscribed*: Displays active All-Access banner with option to buy outright for perpetual access.
 
 ## Do's and Don'ts
 

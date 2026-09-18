@@ -8,15 +8,17 @@ import {
   Layers,
   Lock,
   PlayCircle,
-  CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 import { getServerSession } from "@/lib/auth";
 import { getCourseWithLessons } from "@/features/courses";
 import { hasAccess } from "@/features/entitlements/access";
+import { db } from "@/lib/db";
+import { entitlements, subscriptions } from "@/db/schema";
+import { eq, and, isNull, or } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { EnrollmentPanel } from "./enrollment-panel";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -52,6 +54,39 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
   // Access entitlement check (Invariant #1)
   const isEnrolled = userId ? await hasAccess(userId, course.id) : false;
+
+  const [purchaseEntitlement] = userId
+    ? await db
+        .select({ id: entitlements.id })
+        .from(entitlements)
+        .where(
+          and(
+            eq(entitlements.userId, userId),
+            eq(entitlements.courseId, course.id),
+            eq(entitlements.source, "purchase"),
+            isNull(entitlements.revokedAt)
+          )
+        )
+        .limit(1)
+    : [null];
+  const isOwned = Boolean(purchaseEntitlement);
+
+  const [activeSub] = userId
+    ? await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.userId, userId),
+            or(
+              eq(subscriptions.status, "active"),
+              eq(subscriptions.status, "trialing")
+            )
+          )
+        )
+        .limit(1)
+    : [null];
+  const hasSubscription = Boolean(activeSub);
   const isComingSoon = course.lessons.length === 0;
 
   const totalDurationMinutes = Math.round(course.readiness.totalDurationSeconds / 60);
@@ -236,80 +271,13 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
         {/* Right Column: Pricing & Enrollment Panel (4 cols, sticky on lg) */}
         <aside className="lg:col-span-4 lg:sticky lg:top-24 flex flex-col gap-6">
-          <Card className="p-6 bg-paper-white rounded-cards border border-hairline shadow-subtle flex flex-col gap-6">
-            <div className="flex flex-col gap-1 border-b border-hairline pb-4">
-              <span className="text-xs uppercase tracking-wider text-ash-gray font-medium font-sohne">
-                Acquisition & Access
-              </span>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="font-serif text-3xl sm:text-4xl text-ink-black font-normal">
-                  ${Math.round(course.priceCents / 100)}
-                </span>
-                <span className="text-xs text-slate-gray font-sohne">one-time acquisition</span>
-              </div>
-            </div>
-
-            {isEnrolled ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50 border border-emerald-200 p-3 rounded-inputs text-xs font-medium font-sohne">
-                  <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
-                  <span>You have access to this course monograph</span>
-                </div>
-                <Button
-                  render={<Link href="/library" />}
-                  className="w-full rounded-full bg-ink-black text-paper-white py-3 text-sm font-medium"
-                >
-                  Go to My Library
-                </Button>
-              </div>
-            ) : isComingSoon ? (
-              <div className="flex flex-col gap-3">
-                <div className="bg-mist-gray p-3 rounded-inputs text-xs text-slate-gray font-sohne leading-relaxed">
-                  This course is in editorial preparation. Once the first lecture is published, enrollment will open immediately.
-                </div>
-                <Button
-                  disabled
-                  className="w-full rounded-full bg-mist-gray text-slate-gray py-3 text-sm font-medium cursor-not-allowed"
-                >
-                  Coming Soon
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {/* One-time purchase */}
-                <div className="flex flex-col gap-2">
-                  <Button
-                    render={<Link href={`/checkout?courseId=${course.id}`} />}
-                    className="w-full rounded-full bg-ink-black text-paper-white py-3 text-sm font-medium hover:opacity-90 transition-opacity shadow-sm"
-                  >
-                    Buy course — ${Math.round(course.priceCents / 100)}
-                  </Button>
-                  <p className="text-[11px] text-slate-gray text-center font-sohne">
-                    Perpetual ownership · Includes all future updates
-                  </p>
-                </div>
-
-                {/* All-Access Pass option */}
-                <div className="bg-blush-peach rounded-inputs p-4 flex flex-col gap-2.5 border border-sienna-brown/10">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="size-3.5 text-sienna-brown" />
-                    <span className="text-xs font-semibold text-sienna-brown uppercase tracking-wider font-sohne">
-                      All-Access Pass
-                    </span>
-                  </div>
-                  <p className="text-xs text-sienna-brown/90 leading-relaxed font-sohne">
-                    Unlock this monograph plus every course in the Cursusaurus catalog for $15/mo.
-                  </p>
-                  <Button
-                    render={<Link href="/pricing" />}
-                    className="w-full rounded-full bg-sienna-brown hover:bg-ink-black text-paper-white text-xs font-medium py-2.5 transition-colors"
-                  >
-                    Get All-Access
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
+          <EnrollmentPanel
+            course={course}
+            isEnrolled={isEnrolled}
+            isOwned={isOwned}
+            hasSubscription={hasSubscription}
+            userId={userId}
+          />
         </aside>
       </div>
     </div>

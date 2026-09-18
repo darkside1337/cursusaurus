@@ -20,6 +20,7 @@ export const env = createEnv({
     // Stripe
     STRIPE_SECRET_KEY: z.string().min(1, "STRIPE_SECRET_KEY is required"),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_ALL_ACCESS_PRICE_ID: z.string().optional(),
 
     // Supabase
     SUPABASE_URL: z.string().url().optional(),
@@ -35,3 +36,13 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   },
 });
+
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.npm_lifecycle_event !== "build" &&
+  !process.env.NEXT_PHASE?.includes("build") &&
+  !process.env.CI &&
+  !env.STRIPE_WEBHOOK_SECRET
+) {
+  throw new Error("STRIPE_WEBHOOK_SECRET is required in production (Stripe webhooks)");
+}

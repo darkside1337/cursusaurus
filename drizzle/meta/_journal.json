@@ -36,6 +36,13 @@
       "when": 1789593379337,
       "tag": "0004_locked_lesson_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789689002216,
+      "tag": "0005_fresh_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

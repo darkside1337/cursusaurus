@@ -1,7 +1,7 @@
 # Cursusaurus — Product Requirements Document
 
 **Status:** Active specification
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-18
 
 ---
 
@@ -63,13 +63,16 @@ Course        — id, title, slug (unique), description, category, thumbnail_url
                 is_published, creator_id, created_at, updated_at
 Lesson        — id, course_id (FK, cascade), title, slug (unique per course), description,
                 order_index, duration_seconds, is_preview, timestamps
-Purchase      — id, user_id, course_id, stripe_payment_intent_id (unique), stripe_session_id (unique),
-                status, purchased_at
-Subscription  — id, user_id, stripe_subscription_id (unique), stripe_customer_id, status,
-                current_period_end, timestamps
+Purchase      — id, user_id, course_id, price_paid_cents, stripe_payment_intent_id (unique),
+                stripe_session_id (unique), status, purchased_at
+Subscription  — id, user_id, stripe_subscription_id (unique), stripe_customer_id, stripe_session_id,
+                status, current_period_end, cancel_at_period_end, trial_ends_at, last_event_epoch,
+                timestamps (partial unique index on user_id for active/trialing)
 Entitlement   — id, user_id, course_id (nullable = all-access), source, granted_at, revoked_at
 LessonProgress— id, user_id, course_id, lesson_id, lesson_slug, completed, last_position_seconds, updated_at
 ProcessedStripeEvent — id, event_id (unique — webhook idempotency), event_type, processed_at
+RefundTombstone      — stripe_charge_id (PK), purchase_id, created_at (refund idempotency)
+ReconcileAttempt     — stripe_session_id (PK), user_id, session_type, status, error_message, created_at
 ```
 
 ---
@@ -82,9 +85,9 @@ Numbering mirrors `docs/ROADMAP.md` phases (risk-ordered, and each phase's miles
 | --- | ----------------------------- | --------------------------------------------------------------------------------------- |
 | 0   | Entitlement core (Ph 1)       | `hasAccess()` + full test matrix, no UI/Stripe yet — **done**                           |
 | 1   | Course creation & catalog     | Creator dashboard, lesson management, publish/readiness, public catalog — **done**       |
-| 2   | Payments (One-Time + All-Access) | Stripe Checkout (both modes) + webhooks → Purchase/Subscription + Entitlement          |
+| 2   | Payments (One-Time + All-Access) | Stripe Checkout (both modes) + webhooks → Purchase/Subscription + Entitlement — **done** |
 | 3   | Content delivery & progress   | Gated video playback, progress tracking                                                 |
-| 4   | Polish & billing ops          | Stripe Customer Portal, email receipts, dunning                                         |
+| 4   | Polish & billing ops          | Email receipts, dunning (note: Stripe Customer Portal delivered early in Milestone 2)   |
 | 5   | QA & deploy                   | Verification, deployment, reconciliation cron, production smoke test                    |
 
 ---
@@ -97,6 +100,7 @@ Numbering mirrors `docs/ROADMAP.md` phases (risk-ordered, and each phase's miles
 | Failed subscription payment (`past_due`) | Revoke immediately                    | No grace period — sub-sourced entitlements are revoked as soon as Stripe reports `past_due`. Simpler logic, but means a single failed card charge cuts access instantly; revisit if churn/support load becomes an issue                                    |
 | Video hosting                            | Supabase Storage, signed URLs         | Pairs with Supabase auth/DB if used elsewhere in the stack; no transcoding/adaptive bitrate in v1 — files served as-is behind short-lived signed URLs gated by `hasAccess()`. Swappable for Mux/Cloudflare Stream later without touching entitlement logic |
 | Per-course pricing range                 | $19–$199, creator-set within range    | Enforced server-side in course create/edit Server Action; revisit ceiling if premium/bundle courses are added                                                                              |
+| All-Access subscription price            | $15.00/month                          | Configured in `features/subscriptions/pricing.ts` ($15/mo recurring with 7-day trial)                                                                                                                                      |
 | Trial period                             | 7-day free trial on All-Access        | Subscription starts in `trialing` status; `hasAccess()` treats `trialing` as access-granting, same as `active`                                                                             |
 | Refund + progress data                   | Access revoked, progress retained     | `lesson_progress` rows are never deleted on refund — learner can re-purchase and resume                                                                                                    |
 | Publication vs. purchase eligibility     | Distinct states                       | Publication and purchase eligibility are separate booleans. A course can be **published** with zero lessons (discoverable, marked "coming soon"); it becomes **purchase-eligible** only once published **and** it has ≥ 1 lesson (enforced in `calculateCourseReadiness`) |
@@ -105,7 +109,7 @@ Numbering mirrors `docs/ROADMAP.md` phases (risk-ordered, and each phase's miles
 ## 9. Open questions
 
 - ~~Exact refund window: 14 days or 30 days?~~ → **TBD** (still open — not yet enforced in code)
-- All-Access subscription price point?
+- ~~All-Access subscription price point?~~ → **Resolved**: $15.00/month with 7-day free trial (see §8)
 - ~~Per-course pricing range/model (fixed vs. creator-set)?~~ → **Resolved**: $19–$199, creator-set (see §8)
 - ~~Does a refund on a one-time purchase claw back any progress data, or just access?~~ → **Resolved**: access only; progress retained (see §8)
 - ~~Trial period for All-Access subscription — yes/no, and length?~~ → **Resolved**: 7-day free trial (see §8)

@@ -126,3 +126,65 @@ export async function seedLessonProgress(
     .returning();
   return row;
 }
+
+export async function seedPurchase(
+  db: TestDb,
+  input: {
+    userId: string;
+    courseId: string;
+    stripePaymentIntentId?: string;
+    stripeSessionId?: string;
+    pricePaidCents?: number;
+    status?: "completed" | "refunded" | "failed" | "pending";
+    purchasedAt?: Date;
+  }
+) {
+  const [row] = await db
+    .insert(schema.purchases)
+    .values({
+      id: crypto.randomUUID(),
+      userId: input.userId,
+      courseId: input.courseId,
+      stripePaymentIntentId: input.stripePaymentIntentId ?? `pi_${crypto.randomUUID()}`,
+      stripeSessionId: input.stripeSessionId ?? `cs_${crypto.randomUUID()}`,
+      pricePaidCents: input.pricePaidCents ?? 4900,
+      status: input.status ?? "completed",
+      purchasedAt: input.purchasedAt ?? new Date(),
+    })
+    .returning();
+  return row;
+}
+
+export async function seedSubscription(
+  db: TestDb,
+  input: {
+    userId: string;
+    stripeSubscriptionId?: string;
+    stripeCustomerId?: string;
+    stripeSessionId?: string | null;
+    status?: string;
+    currentPeriodEnd?: Date;
+    cancelAtPeriodEnd?: boolean;
+    trialEndsAt?: Date | null;
+    lastEventEpoch?: number | null;
+  }
+) {
+  const [row] = await db
+    .insert(schema.subscriptions)
+    .values({
+      id: crypto.randomUUID(),
+      userId: input.userId,
+      stripeSubscriptionId: input.stripeSubscriptionId ?? `sub_${crypto.randomUUID()}`,
+      stripeCustomerId: input.stripeCustomerId ?? `cus_${crypto.randomUUID()}`,
+      stripeSessionId: input.stripeSessionId ?? null,
+      status: input.status ?? "active",
+      currentPeriodEnd: input.currentPeriodEnd ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
+      trialEndsAt: input.trialEndsAt ?? null,
+      lastEventEpoch: input.lastEventEpoch ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  return row;
+}

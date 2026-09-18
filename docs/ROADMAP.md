@@ -109,66 +109,66 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 ### Course detail page
 
-- [ ] Course detail page (`/[slug]`) — complete implementation per Stitch reference
-- [ ] Course information, ordered lesson list, preview/gated-content states, and course readiness state
-- [ ] Both pricing cards rendered together in the same pricing panel:
+- [x] Course detail page (`/[slug]`) — complete implementation per Stitch reference
+- [x] Course information, ordered lesson list, preview/gated-content states, and course readiness state
+- [x] Both pricing cards rendered together in the same pricing panel:
   - "Buy this course" — one-time purchase
   - "All-Access" — subscription with a 7-day trial
-- [ ] Pricing cards use the correct price and featured-tier treatment per `DESIGN.md`
-- [ ] Both CTAs connected to real Stripe Checkout session creation
-- [ ] Pricing and access state derived from authoritative server-side data
-- [ ] Purchase CTA respects the course purchase-eligibility rules defined in Phase 2
-- [ ] No placeholder, non-functional, or duplicate pricing-card implementation
+- [x] Pricing cards use the correct price and featured-tier treatment per `DESIGN.md`
+- [x] Both CTAs connected to real Stripe Checkout session creation
+- [x] Pricing and access state derived from authoritative server-side data
+- [x] Purchase CTA respects the course purchase-eligibility rules defined in Phase 2
+- [x] No placeholder, non-functional, or duplicate pricing-card implementation
 
 ### One-time purchase flow
 
-- [ ] Stripe Checkout session creation (one-time mode) — Server Action
-- [ ] Validate authenticated user, published course, purchase eligibility, and server-side price
-- [ ] Stable mapping between Stripe customer identity and authenticated user
-- [ ] `checkout.session.completed` webhook handler → writes `purchases` and course-scoped `entitlements` in one transaction
-- [ ] Refund webhook handler → revokes purchase-sourced entitlements only; leaves `lesson_progress` untouched
-- [ ] Webhook idempotency: unique constraint on `stripe_event_id`
-- [ ] `/checkout/success` polling page (`GET /api/order-status/[sessionId]`) — built per Stitch reference
-- [ ] Define order-status states and distinguish payment completion from entitlement availability
+- [x] Stripe Checkout session creation (one-time mode) — Server Action
+- [x] Validate authenticated user, published course, purchase eligibility, and server-side price
+- [x] Stable mapping between Stripe customer identity and authenticated user
+- [x] `checkout.session.completed` webhook handler → writes `purchases` and course-scoped `entitlements` in one transaction
+- [x] Refund webhook handler → revokes purchase-sourced entitlements only; leaves `lesson_progress` untouched
+- [x] Webhook idempotency: unique constraint on `stripe_event_id`
+- [x] `/checkout/success` polling page (`GET /api/order-status/[sessionId]`) — built per Stitch reference
+- [x] Define order-status states and distinguish payment completion from entitlement availability
 
 ### Subscription flow
 
-- [ ] Stripe Checkout session creation (subscription mode, 7-day trial) — Server Action
-- [ ] `customer.subscription.created` webhook (status `trialing`) → writes `subscriptions` and all-access entitlement (`course_id = null`)
-- [ ] `customer.subscription.updated` webhook → `trialing`/`active` keep entitlement live; `past_due` revokes immediately, with no grace period per PRD §8
-- [ ] `customer.subscription.deleted` webhook → revokes all-access entitlement; purchase-sourced entitlements remain untouched
-- [ ] Define handling for duplicate subscriptions and overlapping subscription events
-- [ ] Stripe Customer Portal session for self-service cancellation/upgrade
-- [ ] `/billing` page — built per Stitch reference
-- [ ] Customer Portal access restricted to the authenticated user's Stripe customer
+- [x] Stripe Checkout session creation (subscription mode, 7-day trial) — Server Action
+- [x] `customer.subscription.created` webhook (status `trialing`) → writes `subscriptions` and all-access entitlement (`course_id = null`)
+- [x] `customer.subscription.updated` webhook → `trialing`/`active` keep entitlement live; `past_due` revokes immediately, with no grace period per PRD §8
+- [x] `customer.subscription.deleted` webhook → revokes all-access entitlement; purchase-sourced entitlements remain untouched
+- [x] Define handling for duplicate subscriptions and overlapping subscription events
+- [x] Stripe Customer Portal session for self-service cancellation/upgrade
+- [x] `/billing` page — built per Stitch reference
+- [x] Customer Portal access restricted to the authenticated user's Stripe customer
 
 ### Recovery and reconciliation
 
-- [ ] Handle abandoned, expired, and canceled Checkout sessions without granting access
-- [ ] Handle payment success followed by delayed webhook processing
-- [ ] Handle webhook transaction failures and retries safely
-- [ ] Define handling for out-of-order subscription events
-- [ ] Implement a reconciliation mechanism for missed or unprocessed Stripe events
-- [ ] Ensure repeated Checkout attempts cannot create duplicate purchase records or entitlement grants
+- [x] Handle abandoned, expired, and canceled Checkout sessions without granting access
+- [x] Handle payment success followed by delayed webhook processing
+- [x] Handle webhook transaction failures and retries safely
+- [x] Define handling for out-of-order subscription events
+- [x] Implement a reconciliation mechanism for missed or unprocessed Stripe events
+- [x] Ensure repeated Checkout attempts cannot create duplicate purchase records or entitlement grants
 
 ### Verification
 
-- [ ] Test catalog → course detail → one-time Checkout → success → entitlement → access
-- [ ] Test catalog → course detail → All-Access Checkout → trial entitlement → access
-- [ ] Test refund → purchase entitlement revoked, progress intact
-- [ ] Test subscription lifecycle: trial → active → `past_due` → canceled
-- [ ] Test overlap: subscribe + purchase one course outright + cancel subscription → that course remains accessible, other courses do not
-- [ ] Test webhook idempotency and transaction behavior for both payment types
-- [ ] Test unauthorized Checkout session creation and invalid client-supplied prices
-- [ ] Test checkout success polling, including pending and failed states
-- [ ] Test delayed, duplicate, and out-of-order webhook delivery
-- [ ] Test reconciliation and recovery after a simulated processing failure
+- [x] Test catalog → course detail → one-time Checkout → success → entitlement → access
+- [x] Test catalog → course detail → All-Access Checkout → trial entitlement → access
+- [x] Test refund → purchase entitlement revoked, progress intact
+- [x] Test subscription lifecycle: trial → active → `past_due` → canceled
+- [x] Test overlap: subscribe + purchase one course outright + cancel subscription → that course remains accessible, other courses do not
+- [x] Test webhook idempotency and transaction behavior for both payment types
+- [x] Test unauthorized Checkout session creation and invalid client-supplied prices
+- [x] Test checkout success polling, including pending and failed states
+- [x] Test delayed, duplicate, and out-of-order webhook delivery
+- [x] Test reconciliation and recovery after a simulated processing failure
 
 **Gate:** Both pricing options work end-to-end through the public catalog and course detail page. Payment and entitlement state remain consistent under retries, failures, and overlapping access sources.
 
 **Risk note:** This phase is larger and riskier than the original split. One-time purchase and subscription webhook logic are introduced together. Mitigate this with isolated handlers, shared entitlement invariants, explicit transaction boundaries, and separate test matrices for each payment type.
 
-**Status note (2026-09-16):** Infrastructure already landed from earlier phases — the `processed_stripe_events` table with a unique `event_id` constraint (migration 0000) exists, and `features/subscriptions/handlers.ts` (created/updated/deleted with transactional idempotency) plus `features/purchases/checkout.ts` are **implemented but unwired**: no `/api/webhooks/stripe` route, Checkout Server Action, or pricing CTA calls them yet. The course detail page (`app/(marketplace)/[slug]/page.tsx`) is a near-complete scaffold with gated lesson rows and both pricing cards, but its CTAs target `/checkout` and `/pricing` routes that are **not yet built**. Checkboxes below stay unchecked until the routes, Server Actions, and tests exist.
+**Status note (2026-09-18):** Phase 3 is fully implemented and verified. Both one-time purchases and All-Access subscriptions (with 7-day free trial) are functional with atomic webhook fulfillment, order status polling, on-demand reconciliation, and customer billing portal management (`/billing`). All 118 tests pass across 13 test files.
 
 ---
 

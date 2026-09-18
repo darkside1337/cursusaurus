@@ -1,5 +1,6 @@
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
-import { getCourseById } from "@/features/courses/queries";
+import { getCourseById, getCourseReadiness } from "@/features/courses/queries";
 import { createPurchaseCheckoutSchema } from "./schemas";
 import type { CreatePurchaseCheckoutInput } from "./types";
 
@@ -17,9 +18,23 @@ export async function createPurchaseCheckoutSession(
     throw new Error(`Course is not available for purchase: ${validated.courseId}`);
   }
 
+  const readiness = await getCourseReadiness(course.id);
+  if (!readiness || !readiness.isPurchaseEligible) {
+    throw new Error(
+      `Course does not meet purchase eligibility criteria: ${validated.courseId}`
+    );
+  }
+
+  const customerParams: Partial<Stripe.Checkout.SessionCreateParams> = {};
+  if (validated.stripeCustomerId) {
+    customerParams.customer = validated.stripeCustomerId;
+  } else if (validated.userEmail) {
+    customerParams.customer_email = validated.userEmail;
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card"],
+    ...customerParams,
     line_items: [
       {
         price_data: {

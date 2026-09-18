@@ -14,7 +14,9 @@ Cursusaurus/
 │   │   ├── page.tsx                 # Course catalog (server) + access-state mapping
 │   │   ├── catalog-content.tsx      # Client: search/filter grid over published courses
 │   │   ├── loading.tsx              # Catalog skeleton
-│   │   └── [slug]/page.tsx          # Course detail scaffold (gated lessons + pricing panel)
+│   │   └── [slug]/
+│   │       ├── page.tsx             # Course detail (gated lessons + pricing panel)
+│   │       └── enrollment-panel.tsx # Client: dual pricing CTAs, overlap state, Checkout triggers
 │   ├── (auth)/                     # Auth route group
 │   │   ├── layout.tsx
 │   │   └── login/page.tsx           # Google + GitHub OAuth sign-in
@@ -31,18 +33,25 @@ Cursusaurus/
 │   │           ├── actions.ts       # Edit-course, lesson CRUD + reorder Server Actions
 │   │           └── curriculum-studio.tsx
 │   ├── api/                        # Route Handlers only — all external API surface
-│   │   └── auth/[...all]/route.ts   # Better-Auth endpoint (built)
-│   │   # TODO (Phases 3–4): webhooks/stripe, order-status/[sessionId], video/signed-url
+│   │   ├── auth/[...all]/route.ts   # Better-Auth endpoint (built)
+│   │   ├── webhooks/stripe/route.ts # Stripe signature validation + event dispatch (built)
+│   │   ├── order-status/[sessionId]/route.ts # Order polling + single-shot reconciliation (built)
+│   │   └── # TODO (Phase 4): video/signed-url
 │   ├── library/                    # Learner's owned/subscribed courses (auth-gated)   [Phase 5]
 │   ├── learn/[courseSlug]/[lessonSlug]/  # Video playback, access-gated              [Phase 4]
-│   ├── billing/                    # Subscription status, Customer Portal link        [Phase 3]
-│   ├── checkout/success/           # Order polling page                               [Phase 3]
+│   ├── billing/                    # Subscription status, Customer Portal link        [built]
+│   │   ├── page.tsx
+│   │   └── billing-content.tsx
+│   ├── checkout/success/           # Order polling page                               [built]
+│   │   ├── page.tsx
+│   │   └── order-status-view.tsx
 │   ├── fonts.ts                    # next/font/local — Signifier + Sohne
 │   └── globals.css                 # @theme inline tokens + :root shadcn mapping
 ├── features/                       # Domain logic — one folder per bounded context
 │   ├── courses/                    # Course CRUD, slug generation, publish state, readiness
-│   ├── purchases/                  # One-time Checkout session creation               [scaffolded]
-│   ├── subscriptions/              # Subscription Checkout, webhook handlers          [scaffolded]
+│   ├── stripe/                     # Stripe dispatcher, fulfillment context, event poisoning dead-letter
+│   ├── purchases/                  # One-time checkout, webhook fulfillment, refund tombstones, queries
+│   ├── subscriptions/              # Subscription checkout, webhook fulfillment, pricing, queries, portal
 │   ├── entitlements/               # hasAccess(), entitlement grant/revoke writers
 │   ├── video/                      # getSignedPlaybackUrl()                           [scaffolded]
 │   └── progress/                   # Lesson progress queries/mutations                 [scaffolded]
@@ -56,6 +65,7 @@ Cursusaurus/
 │   ├── db/                         # Drizzle client
 │   │   ├── index.ts                # Drizzle + Neon client
 │   │   └── schema/auth-schema.ts   # Better-Auth managed tables (user, session, account, ...)
+│   ├── format-price.ts             # Editorial price formatting ($49 vs $19.99)
 │   ├── storage.ts                  # Supabase Storage client (video only)
 │   ├── stripe.ts                   # Stripe SDK instance
 │   ├── auth.ts                     # Better-Auth instance + getServerSession()
@@ -78,7 +88,12 @@ Cursusaurus/
 │   │   ├── creator-dashboard.test.ts
 │   │   ├── curriculum-studio.test.ts
 │   │   ├── lessons.test.ts
+│   │   ├── order-status-api.test.ts
+│   │   ├── payment-reconciliation.test.ts
 │   │   ├── public-catalog.test.ts
+│   │   ├── purchases-checkout.test.ts
+│   │   ├── stripe-webhooks.test.ts
+│   │   ├── subscriptions-checkout.test.ts
 │   │   └── scaffold.test.ts
 │   ├── entitlements/hasAccess.test.ts
 │   └── smoke.test.ts
@@ -99,8 +114,8 @@ Cursusaurus/
 - `components/` receives all data via props. Domain presentation components (e.g. `course-card.tsx`, `course-filter-grid.tsx`) may import **type contracts only** from `features/` for props — never domain logic, actions, or raw queries.
 - `components/ui/` holds shadcn/ui primitives and is the only strictly domain-agnostic layer: no imports from `features/` or `app/`. Style them via design tokens in `globals.css`; don't hand-edit generated primitives unless fixing a genuine primitive bug.
 - `app/api/` Route Handlers verify auth, call into `features/`, return HTTP responses. No inline business logic.
-- Server Actions are used only for authenticated user-initiated form mutations (course create/edit, progress updates). All external API surface (webhooks, polling, signed URLs) is Route Handlers.
-- `proxy.ts` is an eager, cookie-presence auth gate for authenticated areas (`/dashboard` today; `/learn`, `/library`, `/billing` in later phases). It is **optimistic only** — it never runs DB queries and is not the security boundary. Authoritative session checks live in layouts, Server Actions, and Route Handlers (see §8); `/api/auth/**` (OAuth callback), the marketplace, and `/login` pass through untouched.
+- Server Actions are used for authenticated user-initiated form mutations (course create/edit), checkout session creation, and customer portal initialization. All external API surface (webhooks, polling, signed URLs) is Route Handlers.
+- `proxy.ts` is an eager, cookie-presence auth gate for authenticated areas (`/dashboard` and `/billing` today; `/learn` and `/library` in later phases). It is **optimistic only** — it never runs DB queries and is not the security boundary. Authoritative session checks live in layouts, Server Actions, and Route Handlers (see §8); `/api/auth/**` (OAuth callback), the marketplace, and `/login` pass through untouched.
 
 ---
 
@@ -136,8 +151,8 @@ Cursusaurus/
 
 Single Next.js (App Router) application serving learner, creator/admin, and billing flows. No separate backend service.
 
-- **Route Handlers** (`app/api/`): Better-Auth endpoint (built). Planned (Phases 3–4): Stripe webhook, video signed-URL issuance, order status polling.
-- **Server Actions**: Course create/edit, lesson management, publish; lesson progress updates (Phase 4).
+- **Route Handlers** (`app/api/`): Better-Auth endpoint, Stripe webhook dispatch (`webhooks/stripe`), order status polling & single-shot reconciliation (`order-status/[sessionId]`) (all built). Planned (Phase 4): video signed-URL issuance.
+- **Server Actions**: Course create/edit, lesson management, publish; checkout session creation (`createCourseCheckoutSessionAction`, `createSubscriptionCheckoutSessionAction`), and customer portal (`manageSubscriptionAction`); lesson progress updates (Phase 4).
 - **Components** (`components/`): Built on shadcn/ui primitives for accessibility, restyled per `docs/DESIGN.md` tokens.
 - **Deployment**: Vercel
 
@@ -145,7 +160,7 @@ Single Next.js (App Router) application serving learner, creator/admin, and bill
 
 Single source of truth for all domain state. Schema in `db/schema.ts`. Migrations via Drizzle Kit.
 
-Tables: `courses`, `lessons`, `purchases`, `subscriptions`, `entitlements`, `lesson_progress`, `processed_stripe_events` — plus Better-Auth managed tables.
+Tables: `courses`, `lessons`, `purchases`, `subscriptions`, `entitlements`, `lesson_progress`, `processed_stripe_events`, `refund_tombstones`, `reconcile_attempts` — plus Better-Auth managed tables.
 
 ### Supabase Storage
 
@@ -157,7 +172,7 @@ Object storage for video files only — not used for DB or auth in this project.
 
 ### Neon Postgres
 
-- All domain state: courses, lessons, purchases, subscriptions, entitlements, lesson progress
+- All domain state: courses, lessons, purchases, subscriptions, entitlements, lesson progress, refund tombstones, reconcile attempts
 - Better-Auth session/account tables
 - `processed_stripe_events` — webhook idempotency (unique event ID per Stripe delivery)
 - `purchases` and `subscriptions` are payment-state records; **`entitlements` is the only table read for access decisions** (see §6)
@@ -193,16 +208,20 @@ These are architectural constraints, not just conventions. Violating them breaks
 7. **Webhook handlers are idempotent** — each handler inserts into `processed_stripe_events` (unique constraint on `event_id`) within the same transaction; duplicate deliveries become no-ops.
 8. **`purchases`/`subscriptions` + `entitlements` are written in a single Postgres transaction** in the relevant webhook handler.
 9. **Video signed URLs are only issued server-side, after `hasAccess()` returns true.** No client ever receives a storage path or long-lived URL.
+10. **Reconciliation Seam:** On-demand single-shot reconciliation (`/api/order-status/[sessionId]`) triggers only when webhook delivery is delayed or missed during checkout polling, claimed atomically via `reconcile_attempts`.
+11. **Refund Tombstones:** Webhook refund processing writes to `refund_tombstones` to guarantee refund idempotency, revoke course-scoped access, and preserve `lesson_progress`.
+12. **Purchase Completion Immutability:** Completed purchase records (`status = 'completed'`) cannot be overwritten or downgraded by subsequent checkout sessions or duplicate events.
+13. **Whole-Second Epoch Ordering:** Subscription webhooks evaluate `event.created` against `subscriptions.last_event_epoch` to reject out-of-order deliveries.
 
 ---
 
 ## 7. Request Lifecycles
 
-> Status legend: **BUILT** = fully implemented and wired; **SCAFFOLDED** = domain function exists, not yet exposed via a route/Server Action; **PLANNED** = Phase 3–4 work, not started.
+> Status legend: **BUILT** = fully implemented and wired; **SCAFFOLDED** = domain function exists, not yet exposed via a route/Server Action; **PLANNED** = Phase 4 work, not started.
 >
-> Payment, subscription, and video lifecycles below are the target design. Course catalog, course detail, and dashboard flows are built. Stripe webhooks, Checkout session creation, `/learn`, and `/billing` wiring land in Phases 3–4 (see `docs/ROADMAP.md`).
+> Payment, subscription, and video lifecycles below are the design. Course catalog, course detail, dashboard flows, Stripe webhooks, Checkout session creation, and `/billing` wiring are built. Video delivery and `/learn` land in Phase 4 (see `docs/ROADMAP.md`).
 
-### One-time purchase — PLANNED (Phase 3)
+### One-time purchase — BUILT
 
 1. Learner clicks "Buy course" → Server Action creates Stripe Checkout Session (one-time mode) → redirect to Stripe
 2. Learner completes payment → Stripe redirects to `/checkout/success?session_id=...`
@@ -210,7 +229,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 4. Stripe delivers `checkout.session.completed` webhook → handler writes `purchases` + course-scoped `entitlements` row in one transaction
 5. Next poll returns `completed` → success page shows confirmation, links to `/learn/...`
 
-### Subscription signup (with trial) — PLANNED (Phase 3)
+### Subscription signup (with trial) — BUILT
 
 1. Learner clicks "Start All-Access" → Server Action creates Stripe Checkout Session (subscription mode, 7-day trial) → redirect to Stripe
 2. Stripe delivers `customer.subscription.created` (status `trialing`) → handler writes `subscriptions` row + all-access `entitlements` row (`course_id = null`)
@@ -223,7 +242,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 3. If true: call `getSignedPlaybackUrl({ userId, courseId, lessonSlug })` to mint a signed Supabase Storage URL (storage path `<courseId>/<lessonSlug>.mp4`; expiry configurable via `expiresInSeconds`, default 60s), return it
 4. If false: 403
 
-### Subscription cancellation — PLANNED (Phase 3)
+### Subscription cancellation — BUILT
 
 1. Learner cancels via Stripe Customer Portal
 2. Stripe delivers `customer.subscription.updated` with `cancel_at_period_end = true` — entitlement remains active (no change)
@@ -237,7 +256,9 @@ These are architectural constraints, not just conventions. Violating them breaks
 | Concern             | Approach                                                                      |
 | ------------------- | ----------------------------------------------------------------------------- |
 | Auth                | Better-Auth session cookies; eager cookie-presence `proxy.ts` redirect for authenticated areas (optimistic — full session validation runs per page/action) |
-| Payment             | Stripe-hosted Checkout, webhook signature verification                        |
+| Payment             | Stripe-hosted Checkout, webhook signature verification (`constructEvent`)     |
+| Poison Webhooks     | Central dispatcher dead-letters malformed events to `processed_stripe_events` to prevent retry storms |
+| Order Status Isolation | Strict user ownership verification matching session metadata against auth cookie (404 on mismatch) |
 | Video access        | `hasAccess()` check on every signed-URL request — no cached client-side state |
 | Signed URL lifetime | 60-second presigned Supabase Storage GET URLs                                 |
 | Webhook idempotency | Unique constraint on `stripe_event_id`                                        |
@@ -247,10 +268,16 @@ These are architectural constraints, not just conventions. Violating them breaks
 ## 9. Testing
 
 - **Framework**: Vitest, confirmed. Unit + feature tests run against an **in-memory PGlite** database (`@electric-sql/pglite`) — `tests/helpers/db.ts` instantiates PGlite, applies the real Drizzle migrations from `./drizzle`, and exposes a `cleanDb()` helper; no external Postgres needed.
-- **Seams**: feature/query boundaries driving real queries against PGlite, and Route Handler boundaries on the request-to-database path (external HTTP services — Stripe, Supabase — are not mocked in unit tests; Playwright (`tests/e2e`) covers browser flows).
-- **Current coverage** (see `tests/`): `entitlements/hasAccess.test.ts` (full truth table: purchase-only, subscription-only, trialing, both simultaneously, canceled-with-both, past_due, refunded), `features/public-catalog.test.ts`, `features/creator-dashboard.test.ts`, `features/curriculum-studio.test.ts`, `features/lessons.test.ts`, `features/callback-url.test.ts` (open-redirect sanitizer), plus a smoke test. The `proxy.ts` gate itself is verified at build time and via browser flows, not unit-tested.
-- **Priority order for upcoming phases**: Stripe webhook handler tests → video signed-url handler tests → order-status handler tests.
-- See `docs/PRD.md` for the full entitlement test matrix required before any Stripe integration work begins.
+- **Seams**: feature/query boundaries driving real queries against PGlite, and Route Handler boundaries on the request-to-database path (external HTTP services — Stripe, Supabase — are mocked via clean testing seams; Playwright (`tests/e2e`) covers browser flows).
+- **Current coverage** (see `tests/`): 118 tests across 13 test files:
+  - `entitlements/hasAccess.test.ts` (full truth table: purchase-only, subscription-only, trialing, both simultaneously, canceled-with-both, past_due, refunded)
+  - `features/purchases-checkout.test.ts` (validation, price integrity, customer identity, readiness gating)
+  - `features/subscriptions-checkout.test.ts` (trial setup, customer mapping, customer portal session)
+  - `features/stripe-webhooks.test.ts` (transactional fulfillment, refund tombstones, immediate past_due revoke, cancellation isolation)
+  - `features/order-status-api.test.ts` (DB-first lookup, ownership isolation, fallback reconciliation)
+  - `features/payment-reconciliation.test.ts` (recovery after simulated webhook failure)
+  - `features/public-catalog.test.ts`, `features/creator-dashboard.test.ts`, `features/curriculum-studio.test.ts`, `features/lessons.test.ts`, `features/callback-url.test.ts`, plus smoke tests.
+- **Priority order for upcoming phases**: Video signed-url handler tests → video upload flow tests → lesson progress tracking tests.
 
 ---
 
@@ -266,13 +293,14 @@ These are architectural constraints, not just conventions. Violating them breaks
 
 | Term                   | Definition                                                                                                                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entitlement            | A row in `entitlements` granting access; `course_id = null` means all-access, otherwise                                                                                    |
-| course-scoped          |
+| Entitlement            | A row in `entitlements` granting access; `course_id = null` means all-access, otherwise course-scoped                                                                     |
 | All-access entitlement | Subscription-sourced entitlement with `course_id = null`, covers every published course including future ones                                                              |
 | Signed playback URL    | Time-limited (60s), signed Supabase Storage URL for video GET, issued only after `hasAccess()` passes                                                                      |
 | Webhook fulfillment    | The pattern where Stripe webhook events — not the success redirect or client state — are the authoritative write path for `purchases`, `subscriptions`, and `entitlements` |
 | Trialing               | Stripe subscription status during the 7-day free trial; treated as access-granting, same as `active`                                                                       |
+| Refund tombstone       | A row in `refund_tombstones` tracking refunded Stripe charge IDs to prevent duplicate webhook processing and guarantee idempotency                                         |
+| Reconcile attempt      | A row in `reconcile_attempts` providing single-shot atomic mutual exclusion for on-demand checkout session recovery                                                         |
 
 ---
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-18
