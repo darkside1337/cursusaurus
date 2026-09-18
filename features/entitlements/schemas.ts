@@ -11,8 +11,12 @@ export const grantEntitlementSchema = z.object({
   source: z.enum(["purchase", "subscription", "admin_grant"]),
 });
 
-export const revokeEntitlementSchema = z.object({
-  userId: z.string().min(1, "User ID is required"),
-  courseId: z.string().nullable().optional(),
-  source: z.enum(["purchase", "subscription", "admin_grant"]).optional(),
-});
+export const revokeEntitlementSchema = z
+  .object({
+    userId: z.string().min(1, "User ID is required"),
+    courseId: z.string().nullable().optional(),
+    source: z.enum(["purchase", "subscription", "admin_grant"]).optional(),
+  })
+  .refine((data) => data.courseId !== undefined || data.source !== undefined, {
+    message: "Either courseId or source must be specified to prevent unbounded revocation",
+  });

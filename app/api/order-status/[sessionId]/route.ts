@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { purchases, subscriptions, courses, reconcileAttempts } from "@/db/schema";
-import { hasAccess } from "@/features/entitlements/access";
+import { hasAccess, hasAllAccess } from "@/features/entitlements/access";
 import { getCourseById } from "@/features/courses/queries";
 import { reconcileCheckoutSession } from "@/features/purchases/reconcile";
 import { reconcileSubscriptionSession } from "@/features/subscriptions/reconcile";
@@ -69,6 +69,7 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
+    const isEntitled = await hasAllAccess(user.id);
     const isComplete =
       subscriptionRecord.status === "active" ||
       subscriptionRecord.status === "trialing";
@@ -76,7 +77,7 @@ export async function GET(
     return NextResponse.json({
       status: isComplete ? "completed" : "pending",
       type: "subscription",
-      isEntitled: isComplete,
+      isEntitled,
     });
   }
 
@@ -176,10 +177,12 @@ export async function GET(
           .set({ status: "completed" })
           .where(eq(reconcileAttempts.stripeSessionId, sessionId));
 
+        const isEntitled = await hasAllAccess(user.id);
+
         return NextResponse.json({
           status: "completed",
           type: "subscription",
-          isEntitled: true,
+          isEntitled,
         });
       }
 

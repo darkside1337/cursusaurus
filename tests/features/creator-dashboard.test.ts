@@ -150,6 +150,7 @@ describe("Chunk 2.2 — Creator Course List & Creation", () => {
       // Learner B holds an active All-Access subscription (counts as a student, not a sale or royalty)
       await seedEntitlement(testDb, {
         userId: learnerB.id,
+        courseId: null,
         source: "subscription",
       });
 

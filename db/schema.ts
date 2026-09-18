@@ -103,6 +103,12 @@ export const entitlements = pgTable(
   },
   (table) => [
     index("entitlements_user_active_idx").on(table.userId, table.revokedAt),
+    uniqueIndex("entitlements_active_course_idx")
+      .on(table.userId, table.courseId, table.source)
+      .where(sql`${table.revokedAt} IS NULL AND ${table.courseId} IS NOT NULL`),
+    uniqueIndex("entitlements_active_all_access_idx")
+      .on(table.userId, table.source)
+      .where(sql`${table.revokedAt} IS NULL AND ${table.courseId} IS NULL`),
   ]
 );
 

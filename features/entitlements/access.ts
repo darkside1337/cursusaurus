@@ -34,3 +34,27 @@ export async function hasAccess(userId: string, courseId: string): Promise<boole
 
   return Boolean(record);
 }
+
+/**
+ * Authoritative check for whether a user currently has active All-Access.
+ *
+ * INVARIANT #1: `entitlements` is the sole table read for access decisions.
+ * Never queries `subscriptions` directly for entitlement state.
+ *
+ * Returns true if an unrevoked All-Access entitlement (courseId = null) exists.
+ */
+export async function hasAllAccess(userId: string): Promise<boolean> {
+  const [record] = await db
+    .select({ id: entitlements.id })
+    .from(entitlements)
+    .where(
+      and(
+        eq(entitlements.userId, userId),
+        isNull(entitlements.courseId),
+        isNull(entitlements.revokedAt)
+      )
+    )
+    .limit(1);
+
+  return Boolean(record);
+}

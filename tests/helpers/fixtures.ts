@@ -51,7 +51,7 @@ export async function seedEntitlement(
   db: TestDb,
   input: {
     userId: string;
-    courseId?: string | null;
+    courseId: string | null;
     source: "purchase" | "subscription" | "admin_grant";
     revokedAt?: Date | null;
   }
@@ -61,7 +61,7 @@ export async function seedEntitlement(
     .values({
       id: crypto.randomUUID(),
       userId: input.userId,
-      courseId: input.courseId ?? null,
+      courseId: input.courseId,
       source: input.source,
       grantedAt: new Date(),
       revokedAt: input.revokedAt ?? null,

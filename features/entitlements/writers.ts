@@ -20,9 +20,30 @@ export async function grantEntitlement(input: GrantEntitlementInput): Promise<En
       source: validated.source,
       grantedAt: new Date(),
     })
+    .onConflictDoNothing()
     .returning();
 
-  return record;
+  if (record) return record;
+
+  const conditions = [
+    eq(entitlements.userId, validated.userId),
+    eq(entitlements.source, validated.source),
+    isNull(entitlements.revokedAt),
+  ];
+
+  if (validated.courseId) {
+    conditions.push(eq(entitlements.courseId, validated.courseId));
+  } else {
+    conditions.push(isNull(entitlements.courseId));
+  }
+
+  const [existing] = await db
+    .select()
+    .from(entitlements)
+    .where(and(...conditions))
+    .limit(1);
+
+  return existing;
 }
 
 /**
