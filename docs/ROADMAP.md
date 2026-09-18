@@ -168,6 +168,12 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 **Risk note:** This phase is larger and riskier than the original split. One-time purchase and subscription webhook logic are introduced together. Mitigate this with isolated handlers, shared entitlement invariants, explicit transaction boundaries, and separate test matrices for each payment type.
 
+### Audit remediation (Phases 1–3)
+
+- [x] Batch 1: High blast-radius webhooks & concurrency (epoch guard, reconcile claim, lesson row lock)
+- [ ] Batch 2: Schema & entitlements (pre-migration dedup, partial unique indexes, Invariant #1 query, scoped revocation)
+- [ ] Batch 3: Security, UI, pricing & docs (callback URL sanitization, trial abuse prevention, price parser, badge precedence, docs alignment)
+
 **Status note (2026-09-18):** Phase 3 is fully implemented and verified. Both one-time purchases and All-Access subscriptions (with 7-day free trial) are functional with atomic webhook fulfillment, order status polling, on-demand reconciliation, and customer billing portal management (`/billing`). All 118 tests pass across 13 test files.
 
 ---

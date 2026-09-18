@@ -226,6 +226,16 @@ export async function handleSubscriptionUpdated(
       .limit(1);
 
     if (existingSub && existingSub.lastEventEpoch !== null) {
+      // Prevent zombie resurrection if already canceled
+      if (existingSub.status === "canceled" && ctx.eventEpoch <= existingSub.lastEventEpoch) {
+        return false;
+      }
+      // Stripe's event.created timestamp has whole-second resolution. Legitimate
+      // customer.subscription.created and customer.subscription.updated events often share
+      // the exact same second. We strictly use '<' for active lifecycles so same-second
+      // progressions succeed.
+      // NOTE: Same-second non-cancel updates that arrive out of order (e.g. plan change vs metadata)
+      // cannot be distinguished by Stripe's timestamp resolution alone.
       if (ctx.eventEpoch < existingSub.lastEventEpoch) {
         // Out-of-order stale event -> ignore
         return false;
@@ -291,6 +301,9 @@ export async function handleSubscriptionDeleted(
       .limit(1);
 
     if (existingSub && existingSub.lastEventEpoch !== null) {
+      if (existingSub.status === "canceled" && ctx.eventEpoch <= existingSub.lastEventEpoch) {
+        return false;
+      }
       if (ctx.eventEpoch < existingSub.lastEventEpoch) {
         return false;
       }

@@ -134,6 +134,9 @@ export const processedStripeEvents = pgTable("processed_stripe_events", {
 
 export const reconcileAttempts = pgTable("reconcile_attempts", {
   stripeSessionId: text("stripe_session_id").primaryKey(),
+  userId: text("user_id").references(() => user.id),
+  status: text("status").notNull().default("processing"),
+  error: text("error"),
   attemptedAt: timestamp("attempted_at").defaultNow().notNull(),
 });
 

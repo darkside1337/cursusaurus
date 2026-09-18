@@ -40,15 +40,18 @@ async function resolveUniqueCourseSlug(
   }
 }
 
+type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 async function resolveUniqueLessonSlug(
   courseId: string,
   baseSlug: string,
-  excludeLessonId?: string
+  excludeLessonId?: string,
+  client: DbOrTx = db
 ): Promise<string> {
   let slug = baseSlug;
   let suffix = 2;
   while (true) {
-    const [existing] = await db
+    const [existing] = await client
       .select({ id: lessons.id })
       .from(lessons)
       .where(and(eq(lessons.courseId, courseId), eq(lessons.slug, slug)))
@@ -137,34 +140,43 @@ export async function unpublishCourse(courseId: string): Promise<Course | null> 
 export async function createLesson(input: CreateLessonInput): Promise<Lesson> {
   const validated = createLessonSchema.parse(input);
 
-  // Compute next orderIndex
-  const [latestLesson] = await db
-    .select({ orderIndex: lessons.orderIndex })
-    .from(lessons)
-    .where(eq(lessons.courseId, validated.courseId))
-    .orderBy(desc(lessons.orderIndex))
-    .limit(1);
+  return await db.transaction(async (tx) => {
+    // Acquire row-level lock on parent course to serialize concurrent lesson creation
+    await tx
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.id, validated.courseId))
+      .for("update");
 
-  const orderIndex = latestLesson ? latestLesson.orderIndex + 1 : 0;
-  const rawSlug = validated.slug || generateSlug(validated.title);
-  const slug = await resolveUniqueLessonSlug(validated.courseId, rawSlug);
-  const id = crypto.randomUUID();
+    // Compute next orderIndex within the lock
+    const [latestLesson] = await tx
+      .select({ orderIndex: lessons.orderIndex })
+      .from(lessons)
+      .where(eq(lessons.courseId, validated.courseId))
+      .orderBy(desc(lessons.orderIndex))
+      .limit(1);
 
-  const [lesson] = await db
-    .insert(lessons)
-    .values({
-      id,
-      courseId: validated.courseId,
-      title: validated.title,
-      slug,
-      description: validated.description ?? null,
-      orderIndex,
-      durationSeconds: validated.durationSeconds ?? null,
-      isPreview: validated.isPreview ?? false,
-    })
-    .returning();
+    const orderIndex = latestLesson ? latestLesson.orderIndex + 1 : 0;
+    const rawSlug = validated.slug || generateSlug(validated.title);
+    const slug = await resolveUniqueLessonSlug(validated.courseId, rawSlug, undefined, tx);
+    const id = crypto.randomUUID();
 
-  return lesson;
+    const [lesson] = await tx
+      .insert(lessons)
+      .values({
+        id,
+        courseId: validated.courseId,
+        title: validated.title,
+        slug,
+        description: validated.description ?? null,
+        orderIndex,
+        durationSeconds: validated.durationSeconds ?? null,
+        isPreview: validated.isPreview ?? false,
+      })
+      .returning();
+
+    return lesson;
+  });
 }
 
 export async function updateLesson(

@@ -80,15 +80,20 @@ export async function GET(
     });
   }
 
-  // 3. Pre-reconcile path: neither purchase nor subscription recorded yet
-  const [attemptRow] = await db
-    .select()
-    .from(reconcileAttempts)
-    .where(eq(reconcileAttempts.stripeSessionId, sessionId))
-    .limit(1);
+  // 3. Pre-reconcile path: atomic insert claim before retrieving or fulfilling from Stripe
+  // This eliminates TOCTOU races between concurrent polling requests.
+  const [claimed] = await db
+    .insert(reconcileAttempts)
+    .values({
+      stripeSessionId: sessionId,
+      userId: user.id,
+      status: "processing",
+    })
+    .onConflictDoNothing()
+    .returning({ stripeSessionId: reconcileAttempts.stripeSessionId });
 
-  if (attemptRow) {
-    // Already reconciled once; wait on DB state
+  if (!claimed) {
+    // Another request is currently processing or has already attempted reconciliation; wait on DB state
     return NextResponse.json({
       status: "pending",
       isEntitled: false,
@@ -104,15 +109,19 @@ export async function GET(
       stripeSession.metadata?.userId || stripeSession.client_reference_id;
 
     if (sessionUserId !== user.id) {
+      await db
+        .update(reconcileAttempts)
+        .set({ status: "failed", error: "Unauthorized session access" })
+        .where(eq(reconcileAttempts.stripeSessionId, sessionId));
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     // Check expiration / abandonment
     if (stripeSession.status === "expired") {
       await db
-        .insert(reconcileAttempts)
-        .values({ stripeSessionId: sessionId })
-        .onConflictDoNothing();
+        .update(reconcileAttempts)
+        .set({ status: "failed", error: "Checkout session expired" })
+        .where(eq(reconcileAttempts.stripeSessionId, sessionId));
 
       return NextResponse.json({
         status: "failed",
@@ -125,9 +134,9 @@ export async function GET(
         await reconcileCheckoutSession(stripeSession);
 
         await db
-          .insert(reconcileAttempts)
-          .values({ stripeSessionId: sessionId })
-          .onConflictDoNothing();
+          .update(reconcileAttempts)
+          .set({ status: "completed" })
+          .where(eq(reconcileAttempts.stripeSessionId, sessionId));
 
         const courseId = stripeSession.metadata?.courseId;
         const course = courseId ? await getCourseById(courseId) : null;
@@ -142,6 +151,11 @@ export async function GET(
           isEntitled,
         });
       }
+
+      // Payment not completed yet; release claim so subsequent polls can reconcile once paid
+      await db
+        .delete(reconcileAttempts)
+        .where(eq(reconcileAttempts.stripeSessionId, sessionId));
 
       return NextResponse.json({
         status: "pending",
@@ -158,9 +172,9 @@ export async function GET(
         await reconcileSubscriptionSession(stripeSession);
 
         await db
-          .insert(reconcileAttempts)
-          .values({ stripeSessionId: sessionId })
-          .onConflictDoNothing();
+          .update(reconcileAttempts)
+          .set({ status: "completed" })
+          .where(eq(reconcileAttempts.stripeSessionId, sessionId));
 
         return NextResponse.json({
           status: "completed",
@@ -169,6 +183,11 @@ export async function GET(
         });
       }
 
+      // Subscription payment not ready; release claim so subsequent polls can reconcile
+      await db
+        .delete(reconcileAttempts)
+        .where(eq(reconcileAttempts.stripeSessionId, sessionId));
+
       return NextResponse.json({
         status: "pending",
         type: "subscription",
@@ -176,13 +195,21 @@ export async function GET(
       });
     }
 
+    await db
+      .delete(reconcileAttempts)
+      .where(eq(reconcileAttempts.stripeSessionId, sessionId));
+
     return NextResponse.json({
       status: "pending",
       isEntitled: false,
     });
   } catch (err) {
     console.error("Reconciliation retrieve failed for session:", sessionId, err);
-    // Leave reconcileAttempts empty so subsequent polls can retry if this was a transient network error (Fix 7)
+    // Delete claim so subsequent polls can retry if this was a transient network error (Fix 7)
+    await db
+      .delete(reconcileAttempts)
+      .where(eq(reconcileAttempts.stripeSessionId, sessionId));
+
     return NextResponse.json({
       status: "pending",
       isEntitled: false,
