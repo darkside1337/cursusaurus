@@ -71,8 +71,8 @@ Subscription  — id, user_id, stripe_subscription_id (unique), stripe_customer_
 Entitlement   — id, user_id, course_id (nullable = all-access), source, granted_at, revoked_at
 LessonProgress— id, user_id, course_id, lesson_id, lesson_slug, completed, last_position_seconds, updated_at
 ProcessedStripeEvent — id, event_id (unique — webhook idempotency), event_type, processed_at
-RefundTombstone      — stripe_charge_id (PK), purchase_id, created_at (refund idempotency)
-ReconcileAttempt     — stripe_session_id (PK), user_id, session_type, status, error_message, created_at
+RefundTombstone      — stripe_payment_intent_id (PK), refunded_at (refund idempotency)
+ReconcileAttempt     — stripe_session_id (PK), user_id, status, error, attempted_at
 ```
 
 ---

@@ -18,7 +18,7 @@ export interface CreateSubscriptionCheckoutInput {
   userId: string;
   customerEmail?: string;
   stripeCustomerId?: string;
-  priceId?: string;
+  hasUsedTrial?: boolean;
   successUrl: string;
   cancelUrl: string;
 }

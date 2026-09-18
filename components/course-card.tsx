@@ -54,7 +54,13 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
           )}
 
           {/* Access Signal Badge Top-Left (strictly access-state signaling per docs/DESIGN.md) */}
-          {accessState === "purchased" ? (
+          {isComingSoon ? (
+            <div className="absolute top-2.5 left-2.5 z-20">
+              <Badge className="bg-mist-gray/90 text-slate-gray px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none border border-hairline">
+                Coming Soon
+              </Badge>
+            </div>
+          ) : accessState === "purchased" ? (
             <div className="absolute top-2.5 left-2.5 z-20">
               <Badge className="bg-mist-gray text-ink-black border border-hairline/80 px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none">
                 Purchased
@@ -64,12 +70,6 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
             <div className="absolute top-2.5 left-2.5 z-20">
               <Badge className="bg-blush-peach text-sienna-brown px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none border-none">
                 All-Access
-              </Badge>
-            </div>
-          ) : isComingSoon ? (
-            <div className="absolute top-2.5 left-2.5 z-20">
-              <Badge className="bg-mist-gray/90 text-slate-gray px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none border border-hairline">
-                Coming Soon
               </Badge>
             </div>
           ) : null}
@@ -95,7 +95,11 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
           {durationStr ? ` • ${durationStr}` : ""}
         </span>
 
-        {accessState === "purchased" ? (
+        {isComingSoon ? (
+          <span className="text-caption font-medium text-slate-gray font-sohne">
+            Coming soon
+          </span>
+        ) : accessState === "purchased" ? (
           <Link
             href={`/${course.slug}`}
             className="text-caption font-medium text-ink-black flex items-center gap-1 hover:text-slate-gray transition-colors"
@@ -106,10 +110,6 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
         ) : accessState === "all-access" ? (
           <span className="text-caption font-medium text-sienna-brown uppercase tracking-wider font-sohne">
             Included
-          </span>
-        ) : isComingSoon ? (
-          <span className="text-caption font-medium text-slate-gray font-sohne">
-            Coming soon
           </span>
         ) : (
           <span className="text-caption font-medium text-ink-black font-sohne">

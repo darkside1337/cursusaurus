@@ -331,15 +331,10 @@ export function BillingContent({
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      render={<Link href={`/${item.course.slug}`} />}
-                      className="text-xs text-slate-gray hover:text-ink-black gap-1.5 font-normal px-2.5"
-                    >
-                      <Receipt className="size-3.5" />
-                      <span>Invoice</span>
-                    </Button>
+                    <span className="text-xs text-slate-gray font-sohne flex items-center gap-1.5 px-2">
+                      <Receipt className="size-3.5 text-slate-gray/70" />
+                      <span>Receipt emailed</span>
+                    </span>
                     <Button
                       size="sm"
                       render={<Link href={`/${item.course.slug}`} />}

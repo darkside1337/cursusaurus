@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
-import { getActiveSubscriptionByUserId } from "@/features/subscriptions/queries";
+import { getLatestSubscriptionByUserId } from "@/features/subscriptions/queries";
 import { listPurchasesByUserWithCourse } from "@/features/purchases/queries";
 import { BillingContent } from "./billing-content";
 
@@ -11,7 +11,7 @@ export default async function BillingPage() {
   }
 
   const [subscription, purchases] = await Promise.all([
-    getActiveSubscriptionByUserId(session.user.id),
+    getLatestSubscriptionByUserId(session.user.id),
     listPurchasesByUserWithCourse(session.user.id),
   ]);
 

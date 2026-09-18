@@ -13,7 +13,7 @@ export async function createSubscriptionCheckoutSession(
 ): Promise<{ sessionId: string; url: string }> {
   const validated = createSubscriptionCheckoutSchema.parse(input);
 
-  const priceId = validated.priceId || ALL_ACCESS_PRICE_ID;
+  const priceId = ALL_ACCESS_PRICE_ID;
 
   const lineItem: Stripe.Checkout.SessionCreateParams.LineItem = priceId
     ? {
@@ -47,7 +47,7 @@ export async function createSubscriptionCheckoutSession(
     ...customerParams,
     line_items: [lineItem],
     subscription_data: {
-      trial_period_days: ALL_ACCESS_TRIAL_DAYS,
+      ...(validated.hasUsedTrial ? {} : { trial_period_days: ALL_ACCESS_TRIAL_DAYS }),
       metadata: {
         userId: validated.userId,
         subscriptionType: "all_access",

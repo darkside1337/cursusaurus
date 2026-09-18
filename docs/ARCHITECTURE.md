@@ -200,7 +200,7 @@ Object storage for video files only — not used for DB or auth in this project.
 These are architectural constraints, not just conventions. Violating them breaks the access-control model or the payment audit trail.
 
 1. **`entitlements` is the sole table read for access decisions.** `hasAccess(userId, courseId)` never queries `purchases` or `subscriptions` directly — see PRD §5.
-2. **`purchases` and `subscriptions` are payment history/state, written only by Stripe webhook handlers.** Application code never mutates their status fields directly.
+2. **`purchases` and `subscriptions` are payment history/state, written only by Stripe webhook handlers and the atomic reconciliation seam.** Application code never mutates their status fields directly.
 3. **`entitlements.course_id = null` means all-access (subscription-sourced).** A row with a specific `course_id` means purchase-sourced (or a course-scoped grant).
 4. **Canceling or lapsing a subscription revokes only subscription-sourced entitlements.** A purchase-sourced entitlement for the same course is never touched by a subscription webhook.
 5. **`trialing` and `active` subscription status both grant the entitlement; `past_due`, `canceled`, and `unpaid` revoke it immediately** (no grace period — see PRD §8).
@@ -261,7 +261,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 | Order Status Isolation | Strict user ownership verification matching session metadata against auth cookie (404 on mismatch) |
 | Video access        | `hasAccess()` check on every signed-URL request — no cached client-side state |
 | Signed URL lifetime | 60-second presigned Supabase Storage GET URLs                                 |
-| Webhook idempotency | Unique constraint on `stripe_event_id`                                        |
+| Webhook idempotency | Unique constraint on `processed_stripe_events.event_id`                      |
 
 ---
 
@@ -298,7 +298,7 @@ These are architectural constraints, not just conventions. Violating them breaks
 | Signed playback URL    | Time-limited (60s), signed Supabase Storage URL for video GET, issued only after `hasAccess()` passes                                                                      |
 | Webhook fulfillment    | The pattern where Stripe webhook events — not the success redirect or client state — are the authoritative write path for `purchases`, `subscriptions`, and `entitlements` |
 | Trialing               | Stripe subscription status during the 7-day free trial; treated as access-granting, same as `active`                                                                       |
-| Refund tombstone       | A row in `refund_tombstones` tracking refunded Stripe charge IDs to prevent duplicate webhook processing and guarantee idempotency                                         |
+| Refund tombstone       | A row in `refund_tombstones` (keyed by `stripe_payment_intent_id`) to prevent duplicate webhook processing and guarantee idempotency                                       |
 | Reconcile attempt      | A row in `reconcile_attempts` providing single-shot atomic mutual exclusion for on-demand checkout session recovery                                                         |
 
 ---

@@ -38,10 +38,10 @@ export async function getSubscriptionBySessionId(
 }
 
 /**
- * Returns the user's current subscription.
- * Prioritizes active/trialing status, falling back to the most recent row.
+ * Returns the user's most recent subscription row for billing UI display only.
+ * Not an authoritative entitlement check (see Invariant #1: entitlements table is the single source of truth).
  */
-export async function getActiveSubscriptionByUserId(
+export async function getLatestSubscriptionByUserId(
   userId: string
 ): Promise<Subscription | null> {
   const [activeSub] = await db
@@ -68,4 +68,28 @@ export async function getActiveSubscriptionByUserId(
     .limit(1);
 
   return mostRecent ?? null;
+}
+
+/**
+ * Returns the user's active/trialing subscription for billing UI display only.
+ * Not an authoritative entitlement check (see Invariant #1: entitlements table is the single source of truth).
+ */
+export async function getActiveSubscriptionByUserId(
+  userId: string
+): Promise<Subscription | null> {
+  const [activeSub] = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        or(
+          eq(subscriptions.status, "active"),
+          eq(subscriptions.status, "trialing")
+        )
+      )
+    )
+    .limit(1);
+
+  return activeSub ?? null;
 }

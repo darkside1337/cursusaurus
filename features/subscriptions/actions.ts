@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import { env } from "@/config/env";
 import { subscriptions } from "@/db/schema";
+import { getSafeCallbackUrl } from "@/lib/callback-url";
 import { createSubscriptionCheckoutSession } from "./checkout";
 import { createCustomerPortalSession } from "./portal";
 
@@ -21,13 +22,14 @@ export interface SubscriptionActionResult {
 export async function createSubscriptionCheckoutSessionAction(
   callbackUrl = "/billing"
 ): Promise<SubscriptionActionResult> {
+  const safeCallback = getSafeCallbackUrl(callbackUrl, "/billing");
   const session = await getServerSession();
   const user = session?.user;
 
   if (!user) {
     return {
       error: "unauthorized",
-      loginUrl: `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+      loginUrl: `/login?callbackUrl=${encodeURIComponent(safeCallback)}`,
     };
   }
 
@@ -50,7 +52,7 @@ export async function createSubscriptionCheckoutSessionAction(
     return { redirectTo: "/billing" };
   }
 
-  // Stable Stripe customer identity (D12)
+  // Stable Stripe customer identity (D12) & trial abuse check (P3-1)
   const [recentSub] = await db
     .select({ stripeCustomerId: subscriptions.stripeCustomerId })
     .from(subscriptions)
@@ -58,15 +60,17 @@ export async function createSubscriptionCheckoutSessionAction(
     .orderBy(desc(subscriptions.createdAt))
     .limit(1);
 
+  const hasUsedTrial = Boolean(recentSub);
   const baseUrl = env.BETTER_AUTH_URL.replace(/\/$/, "");
   const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${baseUrl}${callbackUrl}`;
+  const cancelUrl = `${baseUrl}${safeCallback}`;
 
   try {
     const checkoutSession = await createSubscriptionCheckoutSession({
       userId: user.id,
       customerEmail: user.email,
       stripeCustomerId: recentSub?.stripeCustomerId,
+      hasUsedTrial,
       successUrl,
       cancelUrl,
     });

@@ -14,6 +14,7 @@ import {
   calculateCourseReadiness,
 } from "@/features/courses";
 import type { Lesson, Course } from "@/features/courses";
+import { parsePriceDollarsToCents } from "@/lib/format-price";
 
 async function assertCreatorAuthorized(courseId: string): Promise<Course> {
   const session = await getServerSession();
@@ -53,7 +54,7 @@ export async function updateCourseMetadataAction(
   try {
     const existing = await assertCreatorAuthorized(courseId);
 
-    const priceCents = Math.round(input.priceDollars * 100);
+    const priceCents = parsePriceDollarsToCents(input.priceDollars);
     if (priceCents < 1900 || priceCents > 19900) {
       return { success: false, error: "Price must be between $19 and $199" };
     }

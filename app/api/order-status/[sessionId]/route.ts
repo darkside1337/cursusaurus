@@ -43,9 +43,11 @@ export async function GET(
     const status =
       purchaseRecord.purchase.status === "completed"
         ? "completed"
-        : purchaseRecord.purchase.status === "failed"
-          ? "failed"
-          : "pending";
+        : purchaseRecord.purchase.status === "refunded"
+          ? "refunded"
+          : purchaseRecord.purchase.status === "failed"
+            ? "failed"
+            : "pending";
 
     return NextResponse.json({
       status,
@@ -97,6 +99,7 @@ export async function GET(
     // Another request is currently processing or has already attempted reconciliation; wait on DB state
     return NextResponse.json({
       status: "pending",
+      type: "unknown",
       isEntitled: false,
     });
   }
@@ -126,6 +129,7 @@ export async function GET(
 
       return NextResponse.json({
         status: "failed",
+        type: stripeSession.mode === "subscription" ? "subscription" : "purchase",
         isEntitled: false,
       });
     }
@@ -204,6 +208,7 @@ export async function GET(
 
     return NextResponse.json({
       status: "pending",
+      type: "unknown",
       isEntitled: false,
     });
   } catch (err) {
@@ -215,6 +220,7 @@ export async function GET(
 
     return NextResponse.json({
       status: "pending",
+      type: "unknown",
       isEntitled: false,
     });
   }

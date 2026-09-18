@@ -172,9 +172,9 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 - [x] Batch 1: High blast-radius webhooks & concurrency (epoch guard, reconcile claim, lesson row lock)
 - [x] Batch 2: Schema & entitlements (pre-migration dedup, partial unique indexes, Invariant #1 query, scoped revocation)
-- [ ] Batch 3: Security, UI, pricing & docs (callback URL sanitization, trial abuse prevention, price parser, badge precedence, docs alignment)
+- [x] Batch 3: Security, UI, pricing & docs (callback URL sanitization, trial abuse prevention, price parser, badge precedence, docs alignment)
 
-**Status note (2026-09-18):** Phase 3 is fully implemented and verified. Both one-time purchases and All-Access subscriptions (with 7-day free trial) are functional with atomic webhook fulfillment, order status polling, on-demand reconciliation, and customer billing portal management (`/billing`). All 118 tests pass across 13 test files.
+**Status note (2026-09-18):** Phase 3 and all Phase 1–3 audit remediations (Batches 1–3) are fully implemented and verified. Both one-time purchases and All-Access subscriptions (with 7-day free trial) are functional with atomic webhook fulfillment, order status polling, on-demand reconciliation, and customer billing portal management (`/billing`). All 151 tests pass across 23 test files.
 
 ---
 

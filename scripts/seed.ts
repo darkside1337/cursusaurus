@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { courses, entitlements, lessons } from "@/db/schema";
+import { courses, entitlements, lessons, purchases, subscriptions } from "@/db/schema";
 import { user } from "@/lib/db/schema/auth-schema";
 
 async function seed() {
@@ -105,6 +105,21 @@ async function seed() {
     ])
     .onConflictDoNothing();
 
+  // Matching purchase record for seed-ent-purchase-01
+  await db
+    .insert(purchases)
+    .values({
+      id: "seed-purchase-01",
+      userId: "seed-learner-01",
+      courseId: "seed-course-ts",
+      stripePaymentIntentId: "pi_seed_01",
+      stripeSessionId: "cs_seed_01",
+      pricePaidCents: 4900,
+      status: "completed",
+      purchasedAt: new Date(),
+    })
+    .onConflictDoNothing();
+
   // Purchase-scoped entitlement: learner owns intro-to-typescript
   await db
     .insert(entitlements)
@@ -115,6 +130,21 @@ async function seed() {
       source: "purchase",
       grantedAt: new Date(),
       revokedAt: null,
+    })
+    .onConflictDoNothing();
+
+  // Matching subscription record for seed-ent-sub-01
+  await db
+    .insert(subscriptions)
+    .values({
+      id: "seed-sub-01",
+      userId: "seed-learner-01",
+      stripeSubscriptionId: "sub_seed_01",
+      stripeCustomerId: "cus_seed_01",
+      stripeSessionId: "cs_seed_sub_01",
+      status: "active",
+      currentPeriodEnd: new Date(Date.now() + 30 * 86400 * 1000),
+      cancelAtPeriodEnd: false,
     })
     .onConflictDoNothing();
 
@@ -131,7 +161,7 @@ async function seed() {
     })
     .onConflictDoNothing();
 
-  console.log("Done. Seeded 2 users, 2 courses, 2 entitlements.");
+  console.log("Done. Seeded 2 users, 2 courses, 2 purchases/subscriptions, 2 entitlements.");
   process.exit(0);
 }
 

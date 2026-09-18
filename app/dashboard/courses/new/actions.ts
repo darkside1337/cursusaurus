@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { createCourse } from "@/features/courses";
+import { parsePriceDollarsToCents } from "@/lib/format-price";
 
 export interface CreateCourseActionState {
   error?: string | null;
@@ -20,15 +21,13 @@ export async function createCourseAction(
   const title = (formData.get("title") as string) || "";
   const rawSlug = (formData.get("slug") as string) || "";
   const description = (formData.get("description") as string) || null;
-  const priceRaw = formData.get("price") as string;
-  const priceDollars = Number.parseInt(priceRaw, 10);
+  const priceRaw = (formData.get("price") as string) || "";
+  const priceCents = parsePriceDollarsToCents(priceRaw);
   const thumbnailUrl = (formData.get("thumbnailUrl") as string) || null;
 
-  if (Number.isNaN(priceDollars)) {
-    return { error: "Price must be a valid integer number of dollars" };
+  if (priceCents < 1900 || priceCents > 19900) {
+    return { error: "Price must be between $19 and $199" };
   }
-
-  const priceCents = priceDollars * 100;
 
   let createdCourseId: string;
 
