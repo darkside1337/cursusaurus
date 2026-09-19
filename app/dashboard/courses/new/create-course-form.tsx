@@ -20,7 +20,7 @@ export function CreateCourseForm() {
   const [description, setDescription] = useState("");
   const [isDirty, setIsDirty] = useState(false);
 
-  const autoSlug = generateSlug(title);
+  const autoSlug = title.trim() ? generateSlug(title) : "";
   const displaySlug = customSlug || autoSlug;
   const wordCount = description.trim()
     ? description.trim().split(/\s+/).length
