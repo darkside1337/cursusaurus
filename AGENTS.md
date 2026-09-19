@@ -8,7 +8,7 @@ For project structure, system diagram, request lifecycles, and security, see doc
 For schema, invariants, entitlement model, and testing approach, see docs/PRD.md
 For product positioning, principles, and audience definition, see PRODUCT.md
 
-Tests: `pnpm test` (Vitest) runs against an in-memory PGlite database — no external Postgres needed (118 tests across 13 test files).
+Tests: `pnpm test` (Vitest) runs against an in-memory PGlite database — no external Postgres needed.
 
 Build & Environment: `config/env.ts` validates `STRIPE_WEBHOOK_SECRET` at runtime in production, but permits build commands (`pnpm build`) to proceed without active webhook secrets.
 

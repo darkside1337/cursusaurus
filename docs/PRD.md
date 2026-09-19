@@ -1,7 +1,7 @@
 # Cursusaurus — Product Requirements Document
 
 **Status:** Active specification
-**Last updated:** 2026-09-18
+**Last updated:** 2026-09-19
 
 ---
 
@@ -62,14 +62,14 @@ User          — Better-Auth managed (id, name, email, image, ...). No stripe_c
 Course        — id, title, slug (unique), description, category, thumbnail_url, price_cents,
                 is_published, creator_id, created_at, updated_at
 Lesson        — id, course_id (FK, cascade), title, slug (unique per course), description,
-                order_index, duration_seconds, is_preview, timestamps
+                order_index, duration_seconds, video_key, is_preview, timestamps
 Purchase      — id, user_id, course_id, price_paid_cents, stripe_payment_intent_id (unique),
                 stripe_session_id (unique), status, purchased_at
 Subscription  — id, user_id, stripe_subscription_id (unique), stripe_customer_id, stripe_session_id,
                 status, current_period_end, cancel_at_period_end, trial_ends_at, last_event_epoch,
                 timestamps (partial unique index on user_id for active/trialing)
 Entitlement   — id, user_id, course_id (nullable = all-access), source, granted_at, revoked_at
-LessonProgress— id, user_id, course_id, lesson_id, lesson_slug, completed, last_position_seconds, updated_at
+LessonProgress— id, user_id, course_id, lesson_id, completed, last_position_seconds, updated_at
 ProcessedStripeEvent — id, event_id (unique — webhook idempotency), event_type, processed_at
 RefundTombstone      — stripe_payment_intent_id (PK), refunded_at (refund idempotency)
 ReconcileAttempt     — stripe_session_id (PK), user_id, status, error, attempted_at
@@ -86,7 +86,7 @@ Numbering mirrors `docs/ROADMAP.md` phases (risk-ordered, and each phase's miles
 | 0   | Entitlement core (Ph 1)       | `hasAccess()` + full test matrix, no UI/Stripe yet — **done**                           |
 | 1   | Course creation & catalog     | Creator dashboard, lesson management, publish/readiness, public catalog — **done**       |
 | 2   | Payments (One-Time + All-Access) | Stripe Checkout (both modes) + webhooks → Purchase/Subscription + Entitlement — **done** |
-| 3   | Content delivery & progress   | Gated video playback, progress tracking                                                 |
+| 3   | Content delivery & progress   | Gated video playback, progress tracking — **done**                                      |
 | 4   | Polish & billing ops          | Email receipts, dunning (note: Stripe Customer Portal delivered early in Milestone 2)   |
 | 5   | QA & deploy                   | Verification, deployment, reconciliation cron, production smoke test                    |
 

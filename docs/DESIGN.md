@@ -183,6 +183,20 @@ Sticky right column on desktop (lg), full-width stacked on mobile.
   - *Owned*: Displays "You own this course" badge with direct "Go to course" button.
   - *Subscribed*: Displays active All-Access banner with option to buy outright for perpetual access.
 
+### Classroom & Lesson Player View
+
+**Role:** Video playback, lesson outlines, and persistent progress tracking (`/learn/[courseSlug]/[lessonSlug]`)
+
+Two-column layout on desktop (`lg`), single-column on mobile.
+- **Classroom Header**: Clean top bar featuring back breadcrumb to catalog/course, course title with category tag, course completion percentage with Ink Black Progress Bar, and account navigation.
+- **Main Stage Left (8 cols)**:
+  - *Video Player Shell*: 20px elevated container with dark scrim controls, aspect-video playback, or editorial no-video fallback card.
+  - *Lecture Control Strip*: Primary button to mark lesson completed (toggles completed state and persists), flanked by previous/next lesson navigation buttons.
+  - *Lecture Synopsis & Notes*: Signifier headline with Sohne prose containing lesson monograph synopsis and learning notes.
+- **Curriculum Syllabus Sidebar Right (4 cols)**:
+  - Sticky Paper White card (`rounded-[20px]`) showing lecture count and total instruction duration.
+  - Interactive lesson row items showing completion checkmarks (emerald), current playback indicator, access badges (Blush Peach "All-Access" for locked lessons), preview tags, and duration labels.
+
 ## Do's and Don'ts
 
 ### Do

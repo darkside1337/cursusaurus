@@ -174,7 +174,7 @@ This phase combines one-time purchases and subscriptions. The course detail page
 - [x] Batch 2: Schema & entitlements (pre-migration dedup, partial unique indexes, Invariant #1 query, scoped revocation)
 - [x] Batch 3: Security, UI, pricing & docs (callback URL sanitization, trial abuse prevention, price parser, badge precedence, docs alignment)
 
-**Status note (2026-09-18):** Phase 3 and all Phase 1–3 audit remediations (Batches 1–3) are fully implemented and verified. Both one-time purchases and All-Access subscriptions (with 7-day free trial) are functional with atomic webhook fulfillment, order status polling, on-demand reconciliation, and customer billing portal management (`/billing`). All 151 tests pass across 23 test files.
+**Status note (2026-09-18):** Phase 3 and all Phase 1–3 audit remediations (Batches 1–3) are fully implemented and verified. Both one-time purchases and All-Access subscriptions (with 7-day free trial) are functional with atomic webhook fulfillment, order status polling, on-demand reconciliation, and customer billing portal management (`/billing`). All tests pass.
 
 ---
 
@@ -184,37 +184,37 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 ### Video delivery
 
-- [ ] `lesson_progress` table + migration
-- [ ] Video upload flow into Supabase Storage (private bucket), integrated into creator lesson management
-- [ ] Upload validation, authorization, and storage metadata persistence
-- [ ] Define the relationship between lesson IDs and uploaded video assets
-- [ ] `getSignedPlaybackUrl(userId, courseId, lessonId)` — verifies access to the specific lesson through `hasAccess()`, returns 403 if false, otherwise mints a 60-second signed URL
-- [ ] `GET /api/video/signed-url` route handler
-- [ ] `/learn/[courseSlug]/[lessonSlug]` page — Video Player Shell component, gated by the signed-URL endpoint, built per Stitch reference
-- [ ] Preview lesson access rules implemented independently from paid lesson access
-- [ ] Handle published lessons whose videos have not yet been uploaded
-- [ ] Extend `proxy.ts` eager auth matcher to `/learn`, `/library`, and `/billing`
+- [x] `lesson_progress` table + migration
+- [x] Video upload flow into Supabase Storage (private bucket), integrated into creator lesson management
+- [x] Upload validation, authorization, and storage metadata persistence
+- [x] Define the relationship between lesson IDs and uploaded video assets
+- [x] `getSignedPlaybackUrl(userId, courseId, lessonId)` — verifies access to the specific lesson through `hasAccess()`, returns 403 if false, otherwise mints a 60-second signed URL
+- [x] `GET /api/video/signed-url` route handler
+- [x] `/learn/[courseSlug]/[lessonSlug]` page — Video Player Shell component, gated by the signed-URL endpoint, built per Stitch reference
+- [x] Preview lesson access rules implemented independently from paid lesson access
+- [x] Handle published lessons whose videos have not yet been uploaded
+- [x] Extend `proxy.ts` eager auth matcher to `/learn`, `/library`, and `/billing`
 
 ### Progress tracking
 
-- [ ] Define lesson completion and playback milestone semantics
-- [ ] Server Action to update `lesson_progress` on playback milestones
-- [ ] Progress updates are validated and idempotent
-- [ ] Progress Bar component wired to real progress data (ink-black fill, never peach, per `DESIGN.md`)
-- [ ] Progress data persisted and loaded for the authenticated learner
-- [ ] Define how course-level progress is calculated from lesson-level progress
+- [x] Define lesson completion and playback milestone semantics
+- [x] Server Action to update `lesson_progress` on playback milestones
+- [x] Progress updates are validated and idempotent
+- [x] Progress Bar component wired to real progress data (ink-black fill, never peach, per `DESIGN.md`)
+- [x] Progress data persisted and loaded for the authenticated learner
+- [x] Define how course-level progress is calculated from lesson-level progress
 
 ### Verification
 
-- [ ] Test signed URL issuance only after `hasAccess()` passes
-- [ ] Test signed URL expiry after 60 seconds
-- [ ] Test unauthorized users cannot upload or access lesson videos
-- [ ] Test preview access and unpublished-course restrictions
-- [ ] Test progress updates, persistence, and retrieval
-- [ ] Test that a refund or subscription cancellation revokes access without deleting learning progress
-- [ ] Test that published-course edits preserve progress for unchanged lesson IDs
+- [x] Test signed URL issuance only after `hasAccess()` passes
+- [x] Test signed URL expiry after 60 seconds
+- [x] Test unauthorized users cannot upload or access lesson videos
+- [x] Test preview access and unpublished-course restrictions
+- [x] Test progress updates, persistence, and retrieval
+- [x] Test that a refund or subscription cancellation revokes access without deleting learning progress
+- [x] Test that published-course edits preserve progress for unchanged lesson IDs
 
-**Status note (2026-09-16):** The `lesson_progress` table and its migrations already exist (migration 0000 + 0002 adds `lesson_id`), and `features/video/signed-url.ts` implements `getSignedPlaybackUrl({ userId, courseId, lessonSlug })` (storage path `<courseId>/<lessonSlug>.mp4`, 60s default) with the `hasAccess()` guard — but nothing calls it yet. The `/learn/[courseSlug]/[lessonSlug]` player, `GET /api/video/signed-url` route, upload flow, and progress Server Action wiring are not started; checkboxes below stay unchecked until those land.
+**Status note (2026-09-19):** Phase 4 is fully implemented and verified. Video asset management allows creator direct uploads to Supabase Storage (`course-videos` bucket) with 50MB limits and canonical storage keys (`${courseId}/${lessonId}.${ext}`). Protected playback yields 60-second signed URLs for entitled learners and creators while permitting unauthenticated free preview playback. Progress tracking supports atomic upserts, sticky auto-completion latching at 90% playback, manual toggling, and denominator calculation against course lessons. The classroom player at `/learn/[courseSlug]/[lessonSlug]` delivers video playback, immediate progress persistence, locked access state signaling (Blush Peach), editorial no-video fallback cards, and syllabus navigation. All tests pass.
 
 **Gate:** Authorized learners can play protected course videos and resume their progress. Unauthorized learners cannot obtain signed playback URLs.
 
