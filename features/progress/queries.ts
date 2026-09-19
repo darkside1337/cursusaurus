@@ -1,15 +1,15 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db/db";
-import { lessonProgress } from "@/lib/db/schema";
+import { lessons, lessonProgress } from "@/lib/db/schema";
 import { getLessonProgressSchema } from "./schemas";
 import type { LessonProgress, CourseProgressSummary } from "./types";
 
 export async function getLessonProgress(
   userId: string,
   courseId: string,
-  lessonSlug: string
+  lessonId: string
 ): Promise<LessonProgress | null> {
-  const validated = getLessonProgressSchema.parse({ userId, courseId, lessonSlug });
+  const validated = getLessonProgressSchema.parse({ userId, courseId, lessonId });
 
   const [progress] = await db
     .select()
@@ -18,7 +18,7 @@ export async function getLessonProgress(
       and(
         eq(lessonProgress.userId, validated.userId),
         eq(lessonProgress.courseId, validated.courseId),
-        eq(lessonProgress.lessonSlug, validated.lessonSlug)
+        eq(lessonProgress.lessonId, validated.lessonId)
       )
     )
     .limit(1);
@@ -30,6 +30,14 @@ export async function getCourseProgress(
   userId: string,
   courseId: string
 ): Promise<CourseProgressSummary> {
+  // Total lessons in course from lessons table (denominator)
+  const courseLessons = await db
+    .select({ id: lessons.id })
+    .from(lessons)
+    .where(eq(lessons.courseId, courseId));
+
+  const totalLessonsCount = courseLessons.length;
+
   const records = await db
     .select()
     .from(lessonProgress)
@@ -40,11 +48,22 @@ export async function getCourseProgress(
       )
     );
 
-  const totalLessonsCompleted = records.filter((r) => r.completed).length;
+  const completedLessonsCount = records.filter((r) => r.completed).length;
+  const percentage =
+    totalLessonsCount === 0
+      ? 0
+      : Math.round((completedLessonsCount / totalLessonsCount) * 100);
+
+  const lessonsMap: Record<string, LessonProgress> = {};
+  for (const record of records) {
+    lessonsMap[record.lessonId] = record;
+  }
 
   return {
     courseId,
-    totalLessonsCompleted,
-    lessons: records,
+    totalLessonsCount,
+    completedLessonsCount,
+    percentage,
+    lessons: lessonsMap,
   };
 }

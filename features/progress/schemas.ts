@@ -3,13 +3,19 @@ import { z } from "zod";
 export const updateProgressSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   courseId: z.string().min(1, "Course ID is required"),
-  lessonSlug: z.string().min(1, "Lesson slug is required"),
-  completed: z.boolean().optional(),
-  lastPositionSeconds: z.number().int().min(0).optional(),
+  lessonId: z.string().min(1, "Lesson ID is required"),
+  lastPositionSeconds: z.number().int().optional(),
+});
+
+export const setCompletionSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  courseId: z.string().min(1, "Course ID is required"),
+  lessonId: z.string().min(1, "Lesson ID is required"),
+  completed: z.boolean(),
 });
 
 export const getLessonProgressSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   courseId: z.string().min(1, "Course ID is required"),
-  lessonSlug: z.string().min(1, "Lesson slug is required"),
+  lessonId: z.string().min(1, "Lesson ID is required"),
 });

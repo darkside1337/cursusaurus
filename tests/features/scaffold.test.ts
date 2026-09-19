@@ -143,14 +143,14 @@ describe("Phase 0 Features Scaffolding", () => {
       const parsed = signedPlaybackUrlSchema.parse({
         userId: "user_123",
         courseId: "course_456",
-        lessonSlug: "01-introduction",
+        lessonId: "lesson_789",
       });
       expect(parsed.expiresInSeconds).toBe(60);
 
       const invalid = signedPlaybackUrlSchema.safeParse({
-        userId: "",
-        courseId: "course_456",
-        lessonSlug: "01-introduction",
+        userId: "user_123",
+        courseId: "",
+        lessonId: "lesson_789",
       });
       expect(invalid.success).toBe(false);
     });
@@ -162,8 +162,7 @@ describe("Phase 0 Features Scaffolding", () => {
         updateProgressSchema.safeParse({
           userId: "user_123",
           courseId: "course_456",
-          lessonSlug: "01-intro",
-          completed: true,
+          lessonId: "lesson_789",
           lastPositionSeconds: 120,
         }).success
       ).toBe(true);
@@ -172,7 +171,7 @@ describe("Phase 0 Features Scaffolding", () => {
         getLessonProgressSchema.safeParse({
           userId: "user_123",
           courseId: "course_456",
-          lessonSlug: "01-intro",
+          lessonId: "lesson_789",
         }).success
       ).toBe(true);
     });

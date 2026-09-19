@@ -212,46 +212,51 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   const canWatch = isEnrolled || lesson.isPreview;
 
                   return (
-                    <Card
+                    <Link
                       key={lesson.id}
-                      className="p-4 bg-paper-white rounded-smallcards border border-hairline flex items-center justify-between gap-4 transition-colors"
+                      href={`/learn/${course.slug}/${lesson.slug}`}
+                      className="block group"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono text-xs text-ash-gray font-medium shrink-0">
-                          {lessonNumber}
-                        </span>
-
-                        <div className="size-8 rounded-lg bg-mist-gray flex items-center justify-center text-slate-gray shrink-0">
-                          {canWatch ? (
-                            <PlayCircle className="size-4 text-ink-black" />
-                          ) : (
-                            <Lock className="size-3.5 text-ash-gray" />
-                          )}
-                        </div>
-
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-medium text-ink-black font-sohne truncate">
-                            {lesson.title}
+                      <Card
+                        className="p-4 bg-paper-white group-hover:bg-mist-gray/40 rounded-smallcards border border-hairline flex items-center justify-between gap-4 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="font-mono text-xs text-ash-gray font-medium shrink-0">
+                            {lessonNumber}
                           </span>
-                          {lesson.description && (
-                            <span className="text-xs text-slate-gray font-sohne line-clamp-1">
-                              {lesson.description}
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-2.5 shrink-0">
-                        {lesson.isPreview && (
-                          <Badge className="bg-mist-gray text-ink-black border border-hairline text-[10px] px-2 py-0 rounded-full font-medium">
-                            Free Preview
-                          </Badge>
-                        )}
-                        <span className="text-xs text-ash-gray font-sohne font-medium">
-                          {formatDuration(lesson.durationSeconds)}
-                        </span>
-                      </div>
-                    </Card>
+                          <div className="size-8 rounded-lg bg-mist-gray flex items-center justify-center text-slate-gray shrink-0">
+                            {canWatch ? (
+                              <PlayCircle className="size-4 text-ink-black" />
+                            ) : (
+                              <Lock className="size-3.5 text-ash-gray" />
+                            )}
+                          </div>
+
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium text-ink-black font-sohne truncate group-hover:underline">
+                              {lesson.title}
+                            </span>
+                            {lesson.description && (
+                              <span className="text-xs text-slate-gray font-sohne line-clamp-1">
+                                {lesson.description}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          {lesson.isPreview && (
+                            <Badge className="bg-mist-gray text-ink-black border border-hairline text-[10px] px-2 py-0 rounded-full font-medium">
+                              Free Preview
+                            </Badge>
+                          )}
+                          <span className="text-xs text-ash-gray font-sohne font-medium">
+                            {formatDuration(lesson.durationSeconds)}
+                          </span>
+                        </div>
+                      </Card>
+                    </Link>
                   );
                 })}
               </div>
