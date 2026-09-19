@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 import { getServerSession } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
-import { purchases, subscriptions, courses, reconcileAttempts } from "@/db/schema";
+import { purchases, subscriptions, courses, reconcileAttempts } from "@/lib/db/schema";
 import { hasAccess, hasAllAccess } from "@/features/entitlements/access";
 import { getCourseById } from "@/features/courses/queries";
 import { reconcileCheckoutSession } from "@/features/purchases/reconcile";

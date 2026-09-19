@@ -1,6 +1,6 @@
 import { isNull, eq, and } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { entitlements } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { entitlements } from "@/lib/db/schema";
 import { getServerSession } from "@/lib/auth";
 import { listPublishedCourses } from "@/features/courses";
 import { CatalogContent } from "./catalog-content";

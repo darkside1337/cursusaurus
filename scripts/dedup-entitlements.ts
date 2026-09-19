@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 
 /**
  * Pre-migration dedup script for entitlements table.

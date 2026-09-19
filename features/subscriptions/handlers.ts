@@ -1,8 +1,8 @@
 import type Stripe from "stripe";
 import { eq, and, isNull } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 import { stripe } from "@/lib/stripe";
-import { subscriptions, entitlements, processedStripeEvents } from "@/db/schema";
+import { subscriptions, entitlements, processedStripeEvents } from "@/lib/db/schema";
 import type { FulfillmentContext } from "@/features/stripe/types";
 
 interface SubscriptionUpsertData {

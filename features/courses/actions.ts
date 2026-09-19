@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { courses, lessons, lessonProgress } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { courses, lessons, lessonProgress } from "@/lib/db/schema";
 import {
   createCourseSchema,
   updateCourseSchema,

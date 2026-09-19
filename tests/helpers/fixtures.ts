@@ -1,4 +1,4 @@
-import * as schema from "@/db/schema";
+import * as schema from "@/lib/db/schema";
 import type { TestDb } from "./db";
 
 export async function seedUser(

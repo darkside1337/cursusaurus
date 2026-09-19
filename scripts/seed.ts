@@ -1,6 +1,6 @@
-import { db } from "@/lib/db";
-import { courses, entitlements, lessons, purchases, subscriptions } from "@/db/schema";
-import { user } from "@/lib/db/schema/auth-schema";
+import { db } from "@/lib/db/db";
+import { courses, entitlements, lessons, purchases, subscriptions } from "@/lib/db/schema";
+import { user } from "@/lib/db/schema";
 
 async function seed() {
   console.log("Seeding dev database…");

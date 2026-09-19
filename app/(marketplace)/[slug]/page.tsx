@@ -12,8 +12,8 @@ import {
 import { getServerSession } from "@/lib/auth";
 import { getCourseWithLessons } from "@/features/courses";
 import { hasAccess } from "@/features/entitlements/access";
-import { db } from "@/lib/db";
-import { entitlements, subscriptions } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { entitlements, subscriptions } from "@/lib/db/schema";
 import { eq, and, isNull, or } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

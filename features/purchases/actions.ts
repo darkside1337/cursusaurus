@@ -1,11 +1,11 @@
 "use server";
 
 import { eq, and, isNull, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 import { getServerSession } from "@/lib/auth";
 import { env } from "@/config/env";
 import { getCourseById, getCourseReadiness } from "@/features/courses/queries";
-import { purchases, entitlements, subscriptions } from "@/db/schema";
+import { purchases, entitlements, subscriptions } from "@/lib/db/schema";
 import { createPurchaseCheckoutSession } from "./checkout";
 
 export interface CreateCourseCheckoutResult {

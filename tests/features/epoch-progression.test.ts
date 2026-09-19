@@ -8,7 +8,7 @@ import {
   seedSubscription,
   type TestDb,
 } from "../helpers";
-import { subscriptions } from "@/db/schema";
+import { subscriptions } from "@/lib/db/schema";
 import {
   handleSubscriptionCreated,
   handleSubscriptionUpdated,
@@ -17,7 +17,7 @@ import {
 
 let testDb: TestDb;
 
-vi.mock("@/lib/db", () => ({
+vi.mock("@/lib/db/db", () => ({
   get db() {
     return testDb;
   },

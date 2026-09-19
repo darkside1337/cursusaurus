@@ -54,7 +54,7 @@ A single `hasAccess(user, course)` check must be true for two structurally diffe
 
 ## 6. Data model (high-level)
 
-Schema lives in `db/schema.ts` (source of truth; migrations in `drizzle/`). High-level shape:
+Schema lives in `lib/db/schema.ts` (source of truth; migrations in `drizzle/`). High-level shape:
 
 ```
 User          — Better-Auth managed (id, name, email, image, ...). No stripe_customer_id column;

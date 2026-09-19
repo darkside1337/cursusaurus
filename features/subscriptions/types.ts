@@ -1,5 +1,5 @@
 import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import { subscriptions } from "@/db/schema";
+import { subscriptions } from "@/lib/db/schema";
 
 export type Subscription = InferSelectModel<typeof subscriptions>;
 export type NewSubscription = InferInsertModel<typeof subscriptions>;

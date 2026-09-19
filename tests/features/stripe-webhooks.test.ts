@@ -18,7 +18,7 @@ import {
   subscriptions,
   refundTombstones,
   lessonProgress,
-} from "@/db/schema";
+} from "@/lib/db/schema";
 import { hasAccess } from "@/features/entitlements/access";
 import {
   handlePurchaseCheckoutCompleted,
@@ -34,7 +34,7 @@ import { dispatchStripeEvent } from "@/features/stripe/dispatch";
 
 let testDb: TestDb;
 
-vi.mock("@/lib/db", () => ({
+vi.mock("@/lib/db/db", () => ({
   get db() {
     return testDb;
   },

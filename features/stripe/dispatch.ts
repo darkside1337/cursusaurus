@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
-import { db } from "@/lib/db";
-import { processedStripeEvents } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { processedStripeEvents } from "@/lib/db/schema";
 import {
   handlePurchaseCheckoutCompleted,
   handlePurchaseRefund,

@@ -9,14 +9,14 @@ import {
   seedLesson,
   type TestDb,
 } from "../helpers";
-import { purchases, subscriptions } from "@/db/schema";
+import { purchases, subscriptions } from "@/lib/db/schema";
 import { hasAccess } from "@/features/entitlements/access";
 import { reconcileCheckoutSession } from "@/features/purchases/reconcile";
 import { reconcileSubscriptionSession } from "@/features/subscriptions/reconcile";
 
 let testDb: TestDb;
 
-vi.mock("@/lib/db", () => ({
+vi.mock("@/lib/db/db", () => ({
   get db() {
     return testDb;
   },

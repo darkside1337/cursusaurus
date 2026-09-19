@@ -1,5 +1,5 @@
 import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import { lessonProgress } from "@/db/schema";
+import { lessonProgress } from "@/lib/db/schema";
 
 export type LessonProgress = InferSelectModel<typeof lessonProgress>;
 export type NewLessonProgress = InferInsertModel<typeof lessonProgress>;

@@ -18,7 +18,7 @@ import { CatalogGridSkeleton, filterCatalogCourses } from "@/app/(marketplace)/c
 
 let testDb: TestDb;
 
-vi.mock("@/lib/db", () => ({
+vi.mock("@/lib/db/db", () => ({
   get db() {
     return testDb;
   },

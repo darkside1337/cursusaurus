@@ -1,6 +1,6 @@
 import { eq, and, or, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { subscriptions } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { subscriptions } from "@/lib/db/schema";
 import type { Subscription } from "./types";
 
 export async function getSubscriptionByUserId(userId: string): Promise<Subscription | null> {

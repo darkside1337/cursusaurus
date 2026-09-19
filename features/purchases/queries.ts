@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { purchases, courses } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { purchases, courses } from "@/lib/db/schema";
 import type { Purchase, PurchaseOrderStatusResult } from "./types";
 
 export async function getPurchaseById(purchaseId: string): Promise<Purchase | null> {

@@ -1,6 +1,6 @@
 import { eq, and, or, asc, desc, isNull, inArray, count } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { courses, lessons, user, entitlements } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { courses, lessons, user, entitlements } from "@/lib/db/schema";
 import type {
   Course,
   Lesson,

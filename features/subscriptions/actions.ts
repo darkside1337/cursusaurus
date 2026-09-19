@@ -1,10 +1,10 @@
 "use server";
 
 import { eq, and, or, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 import { getServerSession } from "@/lib/auth";
 import { env } from "@/config/env";
-import { subscriptions } from "@/db/schema";
+import { subscriptions } from "@/lib/db/schema";
 import { getSafeCallbackUrl } from "@/lib/callback-url";
 import { createSubscriptionCheckoutSession } from "./checkout";
 import { createCustomerPortalSession } from "./portal";

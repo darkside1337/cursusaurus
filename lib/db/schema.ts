@@ -1,8 +1,8 @@
 import { pgTable, text, timestamp, boolean, integer, bigint, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { user } from "@/lib/db/schema/auth-schema";
+import { user } from "./auth-schema";
 
-export * from "@/lib/db/schema/auth-schema";
+export * from "./auth-schema";
 
 export const courses = pgTable("courses", {
   id: text("id").primaryKey(),

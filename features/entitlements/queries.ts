@@ -1,6 +1,6 @@
 import { eq, and, isNull } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { entitlements } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { entitlements } from "@/lib/db/schema";
 import type { Entitlement } from "./types";
 
 export async function getUserEntitlements(

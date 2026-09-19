@@ -4,7 +4,7 @@ import { hasAccess } from "@/features/entitlements";
 
 let testDb: TestDb;
 
-vi.mock("@/lib/db", () => ({
+vi.mock("@/lib/db/db", () => ({
   get db() {
     return testDb;
   },

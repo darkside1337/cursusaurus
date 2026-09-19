@@ -1,5 +1,5 @@
 import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
-import { entitlements } from "@/db/schema";
+import { entitlements } from "@/lib/db/schema";
 
 export type Entitlement = InferSelectModel<typeof entitlements>;
 export type NewEntitlement = InferInsertModel<typeof entitlements>;

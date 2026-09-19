@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { testUtils, type TestHelpers } from "better-auth/plugins";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 import * as schema from "@/lib/db/schema";
 
 /**

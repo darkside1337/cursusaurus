@@ -6,13 +6,13 @@ import {
   seedCourse,
   type TestDb,
 } from "../helpers";
-import { reconcileAttempts, purchases } from "@/db/schema";
+import { reconcileAttempts, purchases } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { GET } from "@/app/api/order-status/[sessionId]/route";
 
 let testDb: TestDb;
 
-vi.mock("@/lib/db", () => ({
+vi.mock("@/lib/db/db", () => ({
   get db() {
     return testDb;
   },

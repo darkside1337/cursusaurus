@@ -62,9 +62,10 @@ Cursusaurus/
 │   ├── dashboard-nav.tsx           # Dashboard navigation
 │   └── ui/                         # shadcn/ui primitives (installed, restyled, not hand-edited)
 ├── lib/                            # Infrastructure clients
-│   ├── db/                         # Drizzle client
-│   │   ├── index.ts                # Drizzle + Neon client
-│   │   └── schema/auth-schema.ts   # Better-Auth managed tables (user, session, account, ...)
+│   ├── db/                         # Drizzle database client & schemas
+│   │   ├── db.ts                   # Drizzle + Postgres client instance
+│   │   ├── schema.ts               # Drizzle schema (single source of truth; re-exports auth tables)
+│   │   └── auth-schema.ts          # Better-Auth managed tables (user, session, account, ...)
 │   ├── format-price.ts             # Editorial price formatting ($49 vs $19.99)
 │   ├── storage.ts                  # Supabase Storage client (video only)
 │   ├── stripe.ts                   # Stripe SDK instance
@@ -74,8 +75,6 @@ Cursusaurus/
 │   └── utils.ts                    # cn() helper
 ├── config/
 │   └── env.ts                      # T3 env validation (server + client vars)
-├── db/
-│   └── schema.ts                   # Drizzle schema (single source of truth; re-exports auth tables)
 ├── drizzle/                        # Drizzle Kit generated SQL migrations
 ├── scripts/
 │   └── seed.ts                     # Fixture users, courses, lessons, entitlements
@@ -158,7 +157,7 @@ Single Next.js (App Router) application serving learner, creator/admin, and bill
 
 ### Neon Postgres (via Drizzle ORM)
 
-Single source of truth for all domain state. Schema in `db/schema.ts`. Migrations via Drizzle Kit.
+Single source of truth for all domain state. Schema in `lib/db/schema.ts`. Migrations via Drizzle Kit.
 
 Tables: `courses`, `lessons`, `purchases`, `subscriptions`, `entitlements`, `lesson_progress`, `processed_stripe_events`, `refund_tombstones`, `reconcile_attempts` — plus Better-Auth managed tables.
 

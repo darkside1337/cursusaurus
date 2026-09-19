@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import * as schema from "@/db/schema";
+import * as schema from "@/lib/db/schema";
 
 export type TestDb = PgliteDatabase<typeof schema>;
 

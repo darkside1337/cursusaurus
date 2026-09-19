@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { eq, and, isNull } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { purchases, entitlements, processedStripeEvents, refundTombstones } from "@/db/schema";
+import { db } from "@/lib/db/db";
+import { purchases, entitlements, processedStripeEvents, refundTombstones } from "@/lib/db/schema";
 import type { FulfillmentContext } from "@/features/stripe/types";
 
 /**
