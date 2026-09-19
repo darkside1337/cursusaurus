@@ -15,6 +15,12 @@ import {
 } from "@/features/courses";
 import type { Lesson, Course } from "@/features/courses";
 import { parsePriceDollarsToCents } from "@/lib/format-price";
+import {
+  getLessonVideoUploadUrl,
+  saveLessonVideoAsset,
+  type SupportedVideoExtension,
+  type UploadUrlResult,
+} from "@/features/video";
 
 async function assertCreatorAuthorized(courseId: string): Promise<Course> {
   const session = await getServerSession();
@@ -241,6 +247,63 @@ export async function reorderLessonsAction(
     return {
       success: false,
       error: err instanceof Error ? err.message : "Failed to reorder lessons",
+    };
+  }
+}
+
+export async function getLessonVideoUploadUrlAction(
+  courseId: string,
+  lessonId: string,
+  extension: SupportedVideoExtension
+): Promise<ActionResult<UploadUrlResult>> {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      throw new Error("Authentication required");
+    }
+
+    const result = await getLessonVideoUploadUrl({
+      userId: session.user.id,
+      courseId,
+      lessonId,
+      extension,
+    });
+
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to get upload URL",
+    };
+  }
+}
+
+export async function saveLessonVideoAssetAction(
+  courseId: string,
+  lessonId: string,
+  extension: SupportedVideoExtension,
+  durationSeconds: number
+): Promise<ActionResult<{ videoKey: string }>> {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      throw new Error("Authentication required");
+    }
+
+    const result = await saveLessonVideoAsset({
+      userId: session.user.id,
+      courseId,
+      lessonId,
+      extension,
+      durationSeconds,
+    });
+
+    revalidatePath(`/dashboard/courses/${courseId}`);
+    return { success: true, data: result };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save video asset",
     };
   }
 }

@@ -17,10 +17,13 @@ import {
   Eye,
   Camera,
   CheckCircle2,
+  Upload,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Lesson, CourseReadiness } from "@/features/courses";
 import { updateCourseSchema } from "@/features/courses/schemas";
+import { MAX_VIDEO_BYTES, type SupportedVideoExtension } from "@/features/video/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,6 +59,8 @@ import {
   updateLessonAction,
   deleteLessonAction,
   reorderLessonsAction,
+  getLessonVideoUploadUrlAction,
+  saveLessonVideoAssetAction,
 } from "./actions";
 
 export const COURSE_CATEGORIES = [
@@ -129,6 +134,8 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
   const [lessonMinutes, setLessonMinutes] = useState(0);
   const [lessonSeconds, setLessonSeconds] = useState(0);
   const [lessonIsPreview, setLessonIsPreview] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   // Delete Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -273,6 +280,8 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
     setLessonMinutes(5);
     setLessonSeconds(0);
     setLessonIsPreview(lessons.length === 0); // Default first lesson as preview
+    setIsUploadingVideo(false);
+    setUploadProgress(null);
     setLessonDialogOpen(true);
   };
 
@@ -286,7 +295,111 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
     setLessonMinutes(Math.floor(totalSecs / 60));
     setLessonSeconds(totalSecs % 60);
     setLessonIsPreview(lesson.isPreview);
+    setIsUploadingVideo(false);
+    setUploadProgress(null);
     setLessonDialogOpen(true);
+  };
+
+  // Handle Video Upload for Lesson
+  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingLesson) return;
+
+    // 1. Client pre-check: 50MB
+    if (file.size > MAX_VIDEO_BYTES) {
+      toast.error("Video file exceeds maximum allowed size of 50 MB");
+      e.target.value = "";
+      return;
+    }
+
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "mp4" && ext !== "webm" && ext !== "mov") {
+      toast.error("Only .mp4, .webm, and .mov video files are supported");
+      e.target.value = "";
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    setUploadProgress("Analyzing video...");
+
+    try {
+      // 2. Client-side duration detection via HTML5 video element
+      const objectUrl = URL.createObjectURL(file);
+      const tempVideo = document.createElement("video");
+      tempVideo.preload = "metadata";
+
+      const duration = await new Promise<number>((resolve) => {
+        tempVideo.onloadedmetadata = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(Math.round(tempVideo.duration));
+        };
+        tempVideo.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(Math.max(1, lessonMinutes * 60 + lessonSeconds));
+        };
+        tempVideo.src = objectUrl;
+      });
+
+      setUploadProgress("Requesting upload URL...");
+      const uploadRes = await getLessonVideoUploadUrlAction(
+        course.id,
+        editingLesson.id,
+        ext as SupportedVideoExtension
+      );
+      if (!uploadRes.success || !uploadRes.data) {
+        throw new Error(uploadRes.error || "Failed to obtain upload ticket");
+      }
+
+      setUploadProgress("Uploading video...");
+      const formData = new FormData();
+      formData.append("cacheControl", "3600");
+      formData.append("", file);
+
+      const uploadHttpRes = await fetch(uploadRes.data.uploadUrl, {
+        method: "PUT",
+        body: formData,
+      });
+
+      if (!uploadHttpRes.ok) {
+        throw new Error(`Upload failed: HTTP ${uploadHttpRes.status}`);
+      }
+
+      setUploadProgress("Registering video asset...");
+      const saveRes = await saveLessonVideoAssetAction(
+        course.id,
+        editingLesson.id,
+        ext as SupportedVideoExtension,
+        duration
+      );
+
+      if (!saveRes.success) {
+        throw new Error(saveRes.error || "Failed to register video asset");
+      }
+
+      // Update local lesson state and form inputs
+      const newMins = Math.floor(duration / 60);
+      const newSecs = duration % 60;
+      setLessonMinutes(newMins);
+      setLessonSeconds(newSecs);
+
+      const updated = {
+        ...editingLesson,
+        videoKey: uploadRes.data.videoKey,
+        durationSeconds: duration,
+      };
+      setEditingLesson(updated);
+      const nextLessons = lessons.map((l) => (l.id === updated.id ? updated : l));
+      serverLessonsRef.current = nextLessons;
+      setLessons(nextLessons);
+
+      toast.success("Video lecture uploaded and registered successfully.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Video upload failed");
+    } finally {
+      setIsUploadingVideo(false);
+      setUploadProgress(null);
+      e.target.value = "";
+    }
   };
 
   // Submit Lesson Form (Create or Edit)
@@ -815,9 +928,18 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                               {formatDuration(lesson.durationSeconds)}
                             </span>
                             <span>•</span>
-                            <span className="text-ash-gray">
-                              No video uploaded (metadata mode)
-                            </span>
+                            {lesson.videoKey ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-2 py-0 rounded-full font-medium text-emerald-700 bg-emerald-50 border-emerald-200"
+                              >
+                                Video Ready
+                              </Badge>
+                            ) : (
+                              <span className="text-ash-gray">
+                                No video uploaded (metadata mode)
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -980,6 +1102,51 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                 aria-label="Toggle free preview"
               />
             </div>
+
+            {/* Video Lecture Upload (Available when editing existing lesson) */}
+            {editingLesson && (
+              <div className="flex flex-col gap-2 p-3 rounded-inputs bg-mist-gray/40 border border-hairline">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-ink-black font-sohne">
+                      Lecture Video Asset
+                    </span>
+                    <span className="text-[11px] text-slate-gray">
+                      {editingLesson.videoKey
+                        ? "Video file linked to lesson"
+                        : "Upload .mp4, .webm, or .mov (up to 50 MB)"}
+                    </span>
+                  </div>
+                  {editingLesson.videoKey && (
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 rounded-full text-emerald-700 bg-emerald-50 border-emerald-200 flex items-center gap-1">
+                      <Check className="size-3" />
+                      <span>Ready</span>
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="mt-1">
+                  {isUploadingVideo ? (
+                    <div className="flex items-center gap-2 p-2.5 rounded-inputs bg-paper-white border border-hairline text-xs text-slate-gray">
+                      <Loader2 className="size-4 animate-spin text-ink-black shrink-0" />
+                      <span>{uploadProgress || "Uploading..."}</span>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 p-2.5 rounded-inputs border border-dashed border-slate-gray/40 hover:border-ink-black bg-paper-white cursor-pointer transition-colors text-xs font-medium text-slate-gray hover:text-ink-black">
+                      <Upload className="size-3.5" />
+                      <span>{editingLesson.videoKey ? "Replace video asset" : "Choose video file to upload"}</span>
+                      <input
+                        type="file"
+                        accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime"
+                        className="hidden"
+                        onChange={handleVideoFileChange}
+                        disabled={isUploadingVideo}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="border-t border-hairline pt-4 mt-2">
