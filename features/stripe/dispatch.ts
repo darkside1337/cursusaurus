@@ -10,6 +10,7 @@ import {
   handleSubscriptionCreated,
   handleSubscriptionUpdated,
   handleSubscriptionDeleted,
+  handleInvoiceEvent,
 } from "@/features/subscriptions/handlers";
 import type { FulfillmentContext } from "./types";
 
@@ -92,6 +93,13 @@ export async function dispatchStripeEvent(
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         await handleSubscriptionDeleted(subscription, ctx);
+        return { handled: true, eventType: event.type };
+      }
+
+      case "invoice.payment_succeeded":
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handleInvoiceEvent(invoice, ctx);
         return { handled: true, eventType: event.type };
       }
 

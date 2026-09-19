@@ -35,6 +35,13 @@ export async function createPurchaseCheckoutSession(
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     ...customerParams,
+    ...(validated.userEmail
+      ? {
+          payment_intent_data: {
+            receipt_email: validated.userEmail,
+          },
+        }
+      : {}),
     line_items: [
       {
         price_data: {

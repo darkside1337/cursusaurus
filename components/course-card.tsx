@@ -4,6 +4,7 @@ import { BookOpen, ArrowRight } from "lucide-react";
 import type { CatalogCourseItem } from "@/features/courses";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AccessBadge } from "@/components/access-badge";
 
 export interface CourseCardProps {
   course: CatalogCourseItem;
@@ -60,17 +61,9 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
                 Coming Soon
               </Badge>
             </div>
-          ) : accessState === "purchased" ? (
+          ) : accessState === "purchased" || accessState === "all-access" ? (
             <div className="absolute top-2.5 left-2.5 z-20">
-              <Badge className="bg-mist-gray text-ink-black border border-hairline/80 px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none">
-                Purchased
-              </Badge>
-            </div>
-          ) : accessState === "all-access" ? (
-            <div className="absolute top-2.5 left-2.5 z-20">
-              <Badge className="bg-blush-peach text-sienna-brown px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-wide shadow-none border-none">
-                All-Access
-              </Badge>
+              <AccessBadge state={accessState} />
             </div>
           ) : null}
         </Link>

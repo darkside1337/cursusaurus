@@ -1,4 +1,4 @@
-import { eq, and, or, isNull } from "drizzle-orm";
+import { eq, and, or, isNull, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/db";
 import { entitlements } from "@/lib/db/schema";
 import { hasAccessSchema } from "./schemas";
@@ -57,4 +57,69 @@ export async function hasAllAccess(userId: string): Promise<boolean> {
     .limit(1);
 
   return Boolean(record);
+}
+
+export type CourseAccessState = "all-access" | "purchased" | "locked";
+
+/**
+ * Resolves access states for multiple courses for a given user.
+ * Executes a single SQL query and avoids N+1 query patterns.
+ *
+ * Invariant #1: Strictly reads from `entitlements` where `revoked_at IS NULL`.
+ * Dual-Entitlement Precedence: Standalone/comped course license (`courseId !== null`)
+ * overrides All-Access (`courseId === null`), returning "purchased".
+ */
+export async function resolveUserCoursesAccessMap(
+  userId: string,
+  courseIds: string[]
+): Promise<Map<string, CourseAccessState>> {
+  const accessMap = new Map<string, CourseAccessState>();
+  if (courseIds.length === 0) return accessMap;
+
+  const activeEntitlements = await db
+    .select({
+      courseId: entitlements.courseId,
+      source: entitlements.source,
+    })
+    .from(entitlements)
+    .where(
+      and(
+        eq(entitlements.userId, userId),
+        isNull(entitlements.revokedAt),
+        or(
+          isNull(entitlements.courseId),
+          inArray(entitlements.courseId, courseIds)
+        )
+      )
+    );
+
+  const hasAllAccessEntitlement = activeEntitlements.some((e) => e.courseId === null);
+  const courseSpecificIds = new Set(
+    activeEntitlements
+      .filter((e) => e.courseId !== null)
+      .map((e) => e.courseId!)
+  );
+
+  for (const courseId of courseIds) {
+    if (courseSpecificIds.has(courseId)) {
+      accessMap.set(courseId, "purchased");
+    } else if (hasAllAccessEntitlement) {
+      accessMap.set(courseId, "all-access");
+    } else {
+      accessMap.set(courseId, "locked");
+    }
+  }
+
+  return accessMap;
+}
+
+/**
+ * Resolves access state for a single course for a user.
+ */
+export async function resolveCourseAccessState(
+  userId: string,
+  courseId: string
+): Promise<CourseAccessState> {
+  const accessMap = await resolveUserCoursesAccessMap(userId, [courseId]);
+  return accessMap.get(courseId) ?? "locked";
 }

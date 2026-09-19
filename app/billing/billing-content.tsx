@@ -333,7 +333,7 @@ export function BillingContent({
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-xs text-slate-gray font-sohne flex items-center gap-1.5 px-2">
                       <Receipt className="size-3.5 text-slate-gray/70" />
-                      <span>Receipt emailed</span>
+                      <span>Receipts go to {user.email}</span>
                     </span>
                     <Button
                       size="sm"

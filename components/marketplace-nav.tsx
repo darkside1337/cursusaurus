@@ -51,6 +51,7 @@ export function MarketplaceNav({ user }: MarketplaceNavProps) {
 
   const isBrowseActive = pathname === "/";
   const isPricingActive = pathname === "/pricing";
+  const isLibraryActive = pathname === "/library" || pathname.startsWith("/library/");
 
   return (
     <header className="sticky top-0 left-0 w-full z-50 bg-paper-white/95 backdrop-blur-md border-b border-hairline">
@@ -91,7 +92,12 @@ export function MarketplaceNav({ user }: MarketplaceNavProps) {
             {user && (
               <Link
                 href="/library"
-                className="text-slate-gray hover:text-ink-black transition-colors text-[15px] font-normal"
+                aria-current={isLibraryActive ? "page" : undefined}
+                className={`text-[15px] relative py-1 transition-colors ${
+                  isLibraryActive
+                    ? "text-ink-black font-medium after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-ink-black"
+                    : "text-slate-gray hover:text-ink-black font-normal"
+                }`}
               >
                 My Library
               </Link>

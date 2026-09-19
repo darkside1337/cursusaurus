@@ -224,20 +224,22 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 **Goal:** Complete the supporting learner experience and operational billing behavior.
 
-- [ ] Access Badge component — All-Access / Purchased / Locked states wired to real entitlement data
-- [ ] `/library` page — owned/subscribed courses with progress, no pricing chrome, built per Stitch reference
-- [ ] Library queries distinguish active access from historical purchases and revoked access
-- [ ] Email receipts (Stripe-driven)
-- [ ] Dunning handling for failed renewal charges, beyond the immediate `past_due` revoke
-- [ ] Full `components/ui/` restyle audit — confirm no default shadcn styles remain unaddressed
+- [x] Access Badge component — All-Access / Purchased / Locked states wired to real entitlement data
+- [x] `/library` page — owned/subscribed courses with progress, no pricing chrome, built per Stitch reference
+- [x] Library queries distinguish active access from historical purchases and revoked access
+- [x] Email receipts (Stripe-driven)
+- [x] Dunning handling for failed renewal charges, beyond the immediate `past_due` revoke
+- [x] Full `components/ui/` restyle audit — confirm no default shadcn styles remain unaddressed
 
 ### Verification
 
-- [ ] Test library contents for purchase-only, subscription-only, overlapping, and revoked access
-- [ ] Test access badges against authoritative entitlement data
-- [ ] Test email receipt delivery and failure handling
-- [ ] Test failed-renewal handling and recovery behavior
-- [ ] Test library behavior after refunds, cancellations, and course edits
+- [x] Test library contents for purchase-only, subscription-only, overlapping, and revoked access
+- [x] Test access badges against authoritative entitlement data
+- [x] Test email receipt delivery and failure handling
+- [x] Test failed-renewal handling and recovery behavior
+- [x] Test library behavior after refunds, cancellations, and course edits
+
+**Status note (2026-09-20):** Phase 5 is fully implemented and verified. The learner library at `/library` features server-component shell data fetching, accessible workspace metrics boundary, instant client filtering/search, and zero pricing chrome. The `<AccessBadge>` component cleanly surfaces All-Access, Purchased, and Locked states derived directly from active `entitlements` with single-query map resolution and perpetual purchase precedence over subscriptions. Stripe-driven email receipt parameters are securely bound to Checkout sessions. Operational billing is hardened with unified dunning handling for `invoice.payment_failed` and `invoice.payment_succeeded` via the epoch-guarded `handleInvoiceEvent` path. All active shadcn primitives (`dialog`, `alert-dialog`, `dropdown-menu`, `tabs`, `switch`, `toggle`, `toggle-group`) are restyled to editorial tokens (`font-signifier`, `font-sohne`, `rounded-cards`, hairline borders), and `pnpm audit:ui` confirms zero raw button/input leaks. All 210 tests pass.
 
 **Gate:** The learner library, access indicators, and billing-support flows reflect the same authoritative entitlement state.
 

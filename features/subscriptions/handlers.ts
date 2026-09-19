@@ -79,12 +79,15 @@ export async function upsertSubscription(
       .limit(1);
 
     if (!existingEntitlement) {
-      await tx.insert(entitlements).values({
-        id: crypto.randomUUID(),
-        userId: targetUserId,
-        courseId: null,
-        source: "subscription",
-      });
+      await tx
+        .insert(entitlements)
+        .values({
+          id: crypto.randomUUID(),
+          userId: targetUserId,
+          courseId: null,
+          source: "subscription",
+        })
+        .onConflictDoNothing();
     }
   } else {
     // Revoke subscription all-access entitlement
@@ -433,3 +436,99 @@ export async function handleSubscriptionCheckoutCompleted(
     return true;
   });
 }
+
+/**
+ * Safely extracts the subscription ID from a Stripe invoice across API versions.
+ * Supports newer versions (invoice.parent?.subscription_details?.subscription)
+ * and legacy versions (invoice.subscription).
+ */
+export function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const inv = invoice as unknown as {
+    parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } };
+    subscription?: string | Stripe.Subscription;
+  };
+  const sub = inv.parent?.subscription_details?.subscription ?? inv.subscription;
+  if (!sub) return null;
+  return typeof sub === "string" ? sub : sub.id;
+}
+
+/**
+ * Handles invoice.payment_succeeded and invoice.payment_failed.
+ * Collapses both into a single thin path:
+ * getInvoiceSubscriptionId -> stripe.subscriptions.retrieve -> upsertSubscription.
+ * 
+ * Reuses the epoch guard in upsertSubscription / handlers.
+ * Safe against duplicate delivery (idempotency table) and out-of-order delivery
+ * (fetching current authoritative subscription state directly from Stripe).
+ */
+export async function handleInvoiceEvent(
+  invoice: Stripe.Invoice,
+  ctx: FulfillmentContext,
+  preloadedSub?: Stripe.Subscription
+): Promise<boolean> {
+  const subId = getInvoiceSubscriptionId(invoice);
+  if (!subId && !preloadedSub) {
+    return false;
+  }
+
+  // Pure unit testing seam: Use preloadedSub or fetch authoritative Stripe subscription
+  const subscription = preloadedSub ?? (await stripe.subscriptions.retrieve(subId as string));
+
+  const { currentPeriodEnd, trialEndsAt, cancelAtPeriodEnd, customerId } =
+    extractSubscriptionTimestamps(subscription);
+
+  return await db.transaction(async (tx) => {
+    // 1. Idempotency check
+    const [alreadyProcessed] = await tx
+      .select({ id: processedStripeEvents.id })
+      .from(processedStripeEvents)
+      .where(eq(processedStripeEvents.eventId, ctx.eventId))
+      .limit(1);
+
+    if (alreadyProcessed) {
+      return false;
+    }
+
+    // 2. Epoch guard
+    const [existingSub] = await tx
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.stripeSubscriptionId, subscription.id))
+      .limit(1);
+
+    if (existingSub && existingSub.lastEventEpoch !== null) {
+      if (existingSub.status === "canceled" && ctx.eventEpoch <= existingSub.lastEventEpoch) {
+        return false;
+      }
+      if (ctx.eventEpoch < existingSub.lastEventEpoch) {
+        return false;
+      }
+    }
+
+    await tx.insert(processedStripeEvents).values({
+      id: crypto.randomUUID(),
+      eventId: ctx.eventId,
+      eventType: ctx.eventType,
+    });
+
+    const targetUserId = existingSub?.userId || subscription.metadata?.userId;
+    if (!targetUserId) {
+      console.warn("Invoice event for subscription without userId metadata or existing record", subscription.id);
+      return false;
+    }
+
+    await upsertSubscription(tx, {
+      userId: targetUserId,
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId: customerId,
+      status: subscription.status,
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+      trialEndsAt,
+      lastEventEpoch: ctx.eventEpoch,
+    });
+
+    return true;
+  });
+}
+

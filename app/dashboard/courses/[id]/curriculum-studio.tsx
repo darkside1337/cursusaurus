@@ -1135,7 +1135,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                     <label className="flex items-center justify-center gap-2 p-2.5 rounded-inputs border border-dashed border-slate-gray/40 hover:border-ink-black bg-paper-white cursor-pointer transition-colors text-xs font-medium text-slate-gray hover:text-ink-black">
                       <Upload className="size-3.5" />
                       <span>{editingLesson.videoKey ? "Replace video asset" : "Choose video file to upload"}</span>
-                      <input
+                      <Input
                         type="file"
                         accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime"
                         className="hidden"
