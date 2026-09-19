@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { sql } from "drizzle-orm";
 import * as schema from "@/lib/db/schema";
 
 export type TestDb = PgliteDatabase<typeof schema>;
@@ -9,35 +10,30 @@ let _db: TestDb | undefined;
 
 export async function getTestDb(): Promise<TestDb> {
   if (!_db) {
-    const client = new PGlite();
+    const client = new PGlite({ relaxedDurability: true });
     _db = drizzle(client, { schema });
     await migrate(_db, { migrationsFolder: "./drizzle" });
   }
   return _db;
 }
 
-/** Wipe all rows between tests (child → parent FK order using staged Promise.all). */
+/** Wipe all rows between tests using atomic TRUNCATE with RESTART IDENTITY CASCADE. */
 export async function cleanDb(db: TestDb) {
-  // 1. Delete leaf child tables concurrently
-  await Promise.all([
-    db.delete(schema.entitlements),
-    db.delete(schema.lessonProgress),
-    db.delete(schema.purchases),
-    db.delete(schema.subscriptions),
-    db.delete(schema.processedStripeEvents),
-    db.delete(schema.reconcileAttempts),
-    db.delete(schema.refundTombstones),
-    db.delete(schema.session),
-    db.delete(schema.account),
-    db.delete(schema.verification),
-  ]);
-
-  // 2. Delete lessons (references courses)
-  await db.delete(schema.lessons);
-
-  // 3. Delete courses (references user)
-  await db.delete(schema.courses);
-
-  // 4. Delete root user table
-  await db.delete(schema.user);
+  await db.execute(sql`
+    TRUNCATE TABLE
+      "entitlements",
+      "lesson_progress",
+      "purchases",
+      "subscriptions",
+      "processed_stripe_events",
+      "reconcile_attempts",
+      "refund_tombstones",
+      "session",
+      "account",
+      "verification",
+      "lessons",
+      "courses",
+      "user"
+    RESTART IDENTITY CASCADE;
+  `);
 }

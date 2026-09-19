@@ -34,6 +34,7 @@ export const lessons = pgTable(
     description: text("description"),
     orderIndex: integer("order_index").notNull(),
     durationSeconds: integer("duration_seconds"),
+    videoKey: text("video_key"),
     isPreview: boolean("is_preview").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -112,24 +113,30 @@ export const entitlements = pgTable(
   ]
 );
 
-export const lessonProgress = pgTable("lesson_progress", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id),
-  courseId: text("course_id")
-    .notNull()
-    .references(() => courses.id),
-  lessonId: text("lesson_id")
-    .notNull()
-    .references(() => lessons.id),
-  lessonSlug: text("lesson_slug").notNull(),
-  completed: boolean("completed").default(false).notNull(),
-  lastPositionSeconds: integer("last_position_seconds").default(0).notNull(),
-  updatedAt: timestamp("updated_at")
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const lessonProgress = pgTable(
+  "lesson_progress",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    courseId: text("course_id")
+      .notNull()
+      .references(() => courses.id),
+    lessonId: text("lesson_id")
+      .notNull()
+      .references(() => lessons.id),
+    completed: boolean("completed").default(false).notNull(),
+    lastPositionSeconds: integer("last_position_seconds").default(0).notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("lesson_progress_user_lesson_idx").on(table.userId, table.lessonId),
+    index("lesson_progress_user_course_idx").on(table.userId, table.courseId),
+  ]
+);
 
 export const processedStripeEvents = pgTable("processed_stripe_events", {
   id: text("id").primaryKey(),

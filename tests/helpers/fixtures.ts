@@ -79,6 +79,7 @@ export async function seedLesson(
     description?: string | null;
     orderIndex?: number;
     durationSeconds?: number | null;
+    videoKey?: string | null;
     isPreview?: boolean;
   }
 ) {
@@ -91,7 +92,8 @@ export async function seedLesson(
       slug: input.slug ?? `lesson-${crypto.randomUUID()}`,
       description: input.description ?? null,
       orderIndex: input.orderIndex ?? 0,
-      durationSeconds: input.durationSeconds ?? 300,
+      durationSeconds: input.durationSeconds === null ? null : (input.durationSeconds ?? 300),
+      videoKey: input.videoKey ?? null,
       isPreview: input.isPreview ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -106,7 +108,7 @@ export async function seedLessonProgress(
     userId: string;
     courseId: string;
     lessonId: string;
-    lessonSlug: string;
+    lessonSlug?: string;
     completed?: boolean;
     lastPositionSeconds?: number;
   }
@@ -118,7 +120,6 @@ export async function seedLessonProgress(
       userId: input.userId,
       courseId: input.courseId,
       lessonId: input.lessonId,
-      lessonSlug: input.lessonSlug,
       completed: input.completed ?? false,
       lastPositionSeconds: input.lastPositionSeconds ?? 0,
       updatedAt: new Date(),

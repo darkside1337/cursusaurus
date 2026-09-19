@@ -57,6 +57,13 @@
       "when": 1789736554769,
       "tag": "0007_smooth_marrow",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789780000000,
+      "tag": "0008_video_progress_schema",
+      "breakpoints": true
     }
   ]
 }
