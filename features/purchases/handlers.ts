@@ -50,11 +50,14 @@ export async function handlePurchaseCheckoutCompleted(
 
     if (tombstone) {
       // Payment was already refunded before checkout session completed
-      await tx.insert(processedStripeEvents).values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      });
+      await tx
+        .insert(processedStripeEvents)
+        .values({
+          id: crypto.randomUUID(),
+          eventId: ctx.eventId,
+          eventType: ctx.eventType,
+        })
+        .onConflictDoNothing();
       return false;
     }
 
@@ -73,40 +76,58 @@ export async function handlePurchaseCheckoutCompleted(
 
     if (existingCompletedPurchase) {
       // Acknowledge no-op; record event idempotency
-      await tx.insert(processedStripeEvents).values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      });
+      await tx
+        .insert(processedStripeEvents)
+        .values({
+          id: crypto.randomUUID(),
+          eventId: ctx.eventId,
+          eventType: ctx.eventType,
+        })
+        .onConflictDoNothing();
       return false;
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
-    // 4. Insert purchase record with historical price paid
+    // 4. Insert purchase record with historical price paid (on conflict do nothing for concurrent arrivals)
     const purchaseId = crypto.randomUUID();
-    await tx.insert(purchases).values({
-      id: purchaseId,
-      userId,
-      courseId,
-      stripePaymentIntentId: paymentIntentId,
-      stripeSessionId: session.id,
-      pricePaidCents: session.amount_total ?? null,
-      status: "completed",
-    });
+    const insertedPurchases = await tx
+      .insert(purchases)
+      .values({
+        id: purchaseId,
+        userId,
+        courseId,
+        stripePaymentIntentId: paymentIntentId,
+        stripeSessionId: session.id,
+        pricePaidCents: session.amount_total ?? null,
+        status: "completed",
+      })
+      .onConflictDoNothing()
+      .returning({ id: purchases.id });
+
+    if (insertedPurchases.length === 0) {
+      // Concurrent transaction already inserted this purchase
+      return false;
+    }
 
     // 5. Grant course-scoped entitlement (Invariant #3, #8)
     const entitlementId = crypto.randomUUID();
-    await tx.insert(entitlements).values({
-      id: entitlementId,
-      userId,
-      courseId,
-      source: "purchase",
-    });
+    await tx
+      .insert(entitlements)
+      .values({
+        id: entitlementId,
+        userId,
+        courseId,
+        source: "purchase",
+      })
+      .onConflictDoNothing();
 
     return true;
   });
@@ -147,11 +168,14 @@ export async function handlePurchaseRefund(
       return false;
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
     const [purchase] = await tx
       .select()

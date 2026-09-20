@@ -105,6 +105,7 @@ Numbering mirrors `docs/ROADMAP.md` phases (risk-ordered, and each phase's miles
 | Refund + progress data                   | Access revoked, progress retained     | `lesson_progress` rows are never deleted on refund — learner can re-purchase and resume                                                                                                    |
 | Publication vs. purchase eligibility     | Distinct states                       | Publication and purchase eligibility are separate booleans. A course can be **published** with zero lessons (discoverable, marked "coming soon"); it becomes **purchase-eligible** only once published **and** it has ≥ 1 lesson (enforced in `calculateCourseReadiness`) |
 | Course categories                        | Fixed taxonomy                        | Courses carry a `category` (default `Design`). Catalog ships with: All / Design / Code / Marketing / Writing / Business / Photography                                                                  |
+| Subscription charge refunds              | No-op on subscription lifecycle       | Refunding a subscription invoice charge does not cancel the subscription or revoke All-Access; subscription access remains strictly governed by subscription lifecycle events (`customer.subscription.updated` / `.deleted`). |
 
 ## 9. Open questions
 

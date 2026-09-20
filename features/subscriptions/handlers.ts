@@ -34,18 +34,21 @@ export async function upsertSubscription(
   let targetUserId = data.userId;
 
   if (!existingSub) {
-    await tx.insert(subscriptions).values({
-      id: crypto.randomUUID(),
-      userId: data.userId,
-      stripeSubscriptionId: data.stripeSubscriptionId,
-      stripeCustomerId: data.stripeCustomerId,
-      stripeSessionId: data.stripeSessionId ?? null,
-      status: data.status,
-      currentPeriodEnd: data.currentPeriodEnd,
-      cancelAtPeriodEnd: data.cancelAtPeriodEnd,
-      trialEndsAt: data.trialEndsAt,
-      lastEventEpoch: data.lastEventEpoch,
-    });
+    await tx
+      .insert(subscriptions)
+      .values({
+        id: crypto.randomUUID(),
+        userId: data.userId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSessionId: data.stripeSessionId ?? null,
+        status: data.status,
+        currentPeriodEnd: data.currentPeriodEnd,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        trialEndsAt: data.trialEndsAt,
+        lastEventEpoch: data.lastEventEpoch,
+      })
+      .onConflictDoNothing();
   } else {
     targetUserId = existingSub.userId;
     await tx
@@ -168,19 +171,25 @@ export async function handleSubscriptionCreated(
 
     if (existingSub) {
       // Row already created by checkout.session.completed or newer event
-      await tx.insert(processedStripeEvents).values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      });
+      await tx
+        .insert(processedStripeEvents)
+        .values({
+          id: crypto.randomUUID(),
+          eventId: ctx.eventId,
+          eventType: ctx.eventType,
+        })
+        .onConflictDoNothing();
       return false;
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
     await upsertSubscription(tx, {
       userId,
@@ -245,11 +254,14 @@ export async function handleSubscriptionUpdated(
       }
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
     const targetUserId = existingSub?.userId || userId;
     if (!targetUserId) {
@@ -312,11 +324,14 @@ export async function handleSubscriptionDeleted(
       }
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
     if (!existingSub) {
       // Missing row tombstone (D9)
@@ -415,11 +430,14 @@ export async function handleSubscriptionCheckoutCompleted(
       return false;
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
     await upsertSubscription(tx, {
       userId,
@@ -505,11 +523,14 @@ export async function handleInvoiceEvent(
       }
     }
 
-    await tx.insert(processedStripeEvents).values({
-      id: crypto.randomUUID(),
-      eventId: ctx.eventId,
-      eventType: ctx.eventType,
-    });
+    await tx
+      .insert(processedStripeEvents)
+      .values({
+        id: crypto.randomUUID(),
+        eventId: ctx.eventId,
+        eventType: ctx.eventType,
+      })
+      .onConflictDoNothing();
 
     const targetUserId = existingSub?.userId || subscription.metadata?.userId;
     if (!targetUserId) {
