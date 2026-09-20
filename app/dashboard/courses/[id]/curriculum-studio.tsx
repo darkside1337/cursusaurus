@@ -539,10 +539,10 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
       {/* Editorial Header with Title and Segmented Publication Toggle */}
       <header className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wider font-medium text-ash-gray font-sohne">
+          <span className="text-[11px] uppercase tracking-wider font-medium text-slate-gray font-sohne">
             Course Editor · Syllabus & Curriculum
           </span>
-          <span className="inline-block size-1 rounded-full bg-ash-gray/60" />
+          <span className="inline-block size-1 rounded-full bg-slate-gray/40" />
           {isComingSoon ? (
             <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-xs px-2.5 py-0.5 rounded-full font-medium">
               Coming Soon (0 lessons)
@@ -586,7 +586,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
               value="published"
               className="h-auto min-w-0 rounded-full px-4 py-1.5 font-sohne text-xs font-medium text-slate-gray hover:text-ink-black data-pressed:bg-ink-black data-pressed:text-paper-white data-pressed:shadow-sm flex items-center gap-1.5"
             >
-              {isPublished && <span className="size-1.5 rounded-full bg-blush-peach" />}
+              {isPublished && <span className="size-1.5 rounded-full bg-emerald-400" />}
               Published
             </ToggleGroupItem>
           </ToggleGroup>
@@ -664,7 +664,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="course-desc">Description</Label>
-                <span className="text-[11px] text-ash-gray font-sohne">
+                <span className="text-[11px] text-slate-gray font-sohne">
                   {wordCount} / 600 words
                 </span>
               </div>
@@ -709,11 +709,14 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                 </div>
               </div>
 
-              {/* Price */}
+              {/* Price ($19–$199 PRD Constraint) */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="course-price">Standard Price</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="course-price">Price (USD)</Label>
+                  <span className="text-[11px] text-slate-gray font-sohne">$19–$199</span>
+                </div>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray text-sm font-medium select-none pointer-events-none">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-gray font-medium">
                     $
                   </span>
                   <Input
@@ -721,20 +724,14 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                     type="number"
                     min={19}
                     max={199}
-                    step={1}
-                    value={priceDollars === 0 ? "" : priceDollars}
+                    value={priceDollars}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      setPriceDollars(val === "" ? 0 : Number.parseInt(val, 10) || 0);
+                      setPriceDollars(Number(e.target.value));
                       markMetadataDirty();
                     }}
-                    required
-                    className="h-11 pl-8 text-sm font-medium rounded-inputs"
+                    className="h-10 pl-7 text-xs rounded-inputs font-sohne font-medium"
                   />
                 </div>
-                <p className="text-[11px] text-slate-gray leading-relaxed font-sohne">
-                  Must be between $19 and $199. Included automatically for All-Access subscribers; standalone purchasers receive permanent access.
-                </p>
               </div>
             </div>
 
@@ -751,12 +748,12 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                     sizes="760px"
                   />
                 ) : (
-                  <Camera className="size-8 text-ash-gray" />
+                  <Camera className="size-8 text-slate-gray/60" />
                 )}
 
-                <label
-                  htmlFor="course-thumb"
-                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center bg-ink-black/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all cursor-pointer"
+                <div
+                  onClick={() => document.getElementById("course-thumb")?.focus()}
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center bg-ink-black/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all cursor-pointer pointer-events-none group-hover:pointer-events-auto"
                 >
                   <div className="size-12 rounded-full bg-paper-white/90 text-ink-black flex items-center justify-center shadow-md">
                     <Camera className="size-6" />
@@ -767,7 +764,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                   <span className="text-[11px] font-sohne text-paper-white/70">
                     JPG, PNG, or WebP up to 10MB
                   </span>
-                </label>
+                </div>
               </div>
               <Input
                 id="course-thumb"
@@ -786,13 +783,13 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-hairline pt-5">
               <div className="flex items-center gap-2.5">
                 {isPending ? (
-                  <Loader2 className="size-4 text-ash-gray animate-spin" />
+                  <Loader2 className="size-4 text-slate-gray animate-spin" />
                 ) : isMetadataDirty ? (
                   <span className="size-1.5 rounded-full bg-amber-500" />
                 ) : (
                   <CheckCircle2 className="size-4 text-slate-gray" />
                 )}
-                <span className="font-sohne text-xs text-ash-gray">
+                <span className="font-sohne text-xs text-slate-gray">
                   {isPending
                     ? "Saving changes…"
                     : isMetadataDirty
@@ -901,7 +898,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
 
                         {/* Number & Icon */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-mono text-xs text-ash-gray font-medium">
+                          <span className="font-mono text-xs text-slate-gray font-medium">
                             {lessonNumber}
                           </span>
                           <div className="size-8 rounded-lg bg-mist-gray flex items-center justify-center text-slate-gray">
@@ -924,7 +921,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
 
                           <div className="flex items-center gap-3 text-xs text-slate-gray mt-1 font-sohne">
                             <span className="flex items-center gap-1">
-                              <Clock className="size-3 text-ash-gray" />
+                              <Clock className="size-3 text-slate-gray" />
                               {formatDuration(lesson.durationSeconds)}
                             </span>
                             <span>•</span>
@@ -936,7 +933,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
                                 Video Ready
                               </Badge>
                             ) : (
-                              <span className="text-ash-gray">
+                              <span className="text-slate-gray">
                                 No video uploaded (metadata mode)
                               </span>
                             )}
@@ -1036,7 +1033,7 @@ export function CurriculumStudio({ initialCourse, initialLessons }: CurriculumSt
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="modal-lesson-slug">URL Slug</Label>
-                <span className="text-[11px] text-ash-gray">Auto-generated if blank</span>
+                <span className="text-[11px] text-slate-gray">Auto-generated if blank</span>
               </div>
               <Input
                 id="modal-lesson-slug"

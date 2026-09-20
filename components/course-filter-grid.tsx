@@ -78,10 +78,10 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
               All Courses <span className="text-slate-gray font-normal ml-1">({courses.length})</span>
             </TabsTrigger>
             <TabsTrigger value="published" className="whitespace-nowrap">
-              Published <span className="text-ash-gray font-normal ml-1">({publishedCount})</span>
+              Published <span className="text-slate-gray font-normal ml-1">({publishedCount})</span>
             </TabsTrigger>
             <TabsTrigger value="draft" className="whitespace-nowrap">
-              Drafts <span className="text-ash-gray font-normal ml-1">({draftCount})</span>
+              Drafts <span className="text-slate-gray font-normal ml-1">({draftCount})</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -93,6 +93,7 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter curriculum..."
+            aria-label="Filter curriculum by title or slug"
             className="pl-10 h-10 rounded-[16px] bg-paper-white border border-hairline focus-visible:border-ink-black focus-visible:ring-1 focus-visible:ring-ink-black/20 text-sm shadow-none"
           />
         </div>
@@ -123,7 +124,7 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
                   ) : (
                     <div className="size-full flex flex-col items-center justify-center gap-1.5 text-slate-gray">
                       <BookOpen className="size-8 stroke-[1.5] text-slate-gray/60" />
-                      <span className="text-[11px] font-medium tracking-wider uppercase text-ash-gray font-sohne">
+                      <span className="text-[11px] font-medium tracking-wider uppercase text-slate-gray font-sohne">
                         Monograph
                       </span>
                     </div>
@@ -138,7 +139,7 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
                 </div>
 
                 {/* Category kicker */}
-                <span className="block text-[11px] tracking-wider text-ash-gray uppercase font-medium mb-1.5 font-sohne">
+                <span className="block text-[11px] tracking-wider text-slate-gray uppercase font-medium mb-1.5 font-sohne">
                   {course.category ?? "Curriculum Monograph"}
                 </span>
 
@@ -164,7 +165,7 @@ export function CourseFilterGrid({ courses }: CourseFilterGridProps) {
                     className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                       course.isPublished
                         ? "bg-mist-gray text-ink-black"
-                        : "border border-dashed border-ash-gray/60 text-ash-gray"
+                        : "border border-dashed border-slate-gray/40 text-slate-gray"
                     }`}
                   >
                     {course.isPublished ? "Published" : "Draft"}

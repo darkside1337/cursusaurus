@@ -170,22 +170,22 @@ export function DashboardNav({ user }: DashboardNavProps) {
       </div>
 
       {/* Mobile Nav Sub-row */}
-      <nav className="md:hidden flex items-center justify-around border-t border-hairline py-2 px-4 bg-paper-white" aria-label="Mobile Navigation">
+      <nav className="md:hidden flex items-center justify-around border-t border-hairline py-1 px-4 bg-paper-white" aria-label="Mobile Navigation">
         <Link
           href="/"
-          className="text-xs text-slate-gray hover:text-ink-black font-medium py-1 px-2"
+          className="text-xs text-slate-gray hover:text-ink-black font-medium min-h-[44px] flex items-center justify-center px-3"
         >
           Browse
         </Link>
         <Link
           href="/library"
-          className="text-xs text-slate-gray hover:text-ink-black font-medium py-1 px-2"
+          className="text-xs text-slate-gray hover:text-ink-black font-medium min-h-[44px] flex items-center justify-center px-3"
         >
           My Library
         </Link>
         <Link
           href="/dashboard/courses"
-          className={`text-xs font-medium py-1 px-2 rounded-full ${
+          className={`text-xs font-medium min-h-[44px] flex items-center justify-center px-3 rounded-full ${
             isDashboardActive ? "bg-mist-gray text-ink-black" : "text-slate-gray hover:text-ink-black"
           }`}
         >

@@ -24,7 +24,7 @@ export default async function CreatorCoursesPage() {
       {/* Top Context & Header */}
       <header className="flex flex-col gap-2 pb-6 md:pb-8 border-b border-hairline">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wider font-medium text-ash-gray font-sohne">
+          <span className="text-[11px] uppercase tracking-wider font-medium text-slate-gray font-sohne">
             Creator Workspace · Curriculum Ledger
           </span>
         </div>
@@ -57,7 +57,7 @@ export default async function CreatorCoursesPage() {
         className="grid grid-cols-2 md:grid-cols-4 bg-paper-white rounded-cards border border-hairline shadow-ledger overflow-hidden p-6 md:p-8 divide-y md:divide-y-0 md:divide-x divide-hairline"
       >
         <div className="flex flex-col gap-1 pr-4 pb-4 md:pb-0">
-          <span className="text-[11px] uppercase tracking-widest text-ash-gray font-medium font-sohne">
+          <span className="text-[11px] uppercase tracking-widest text-slate-gray font-medium font-sohne">
             Total Students
           </span>
           <div className="flex items-baseline gap-2 mt-1">
@@ -69,7 +69,7 @@ export default async function CreatorCoursesPage() {
         </div>
 
         <div className="flex flex-col gap-1 pl-0 md:pl-8 pr-4 pb-4 md:pb-0">
-          <span className="text-[11px] uppercase tracking-widest text-ash-gray font-medium font-sohne">
+          <span className="text-[11px] uppercase tracking-widest text-slate-gray font-medium font-sohne">
             Active Masterclasses
           </span>
           <div className="flex items-baseline gap-2 mt-1">
@@ -81,7 +81,7 @@ export default async function CreatorCoursesPage() {
         </div>
 
         <div className="flex flex-col gap-1 pl-0 md:pl-8 pr-4 pt-4 md:pt-0">
-          <span className="text-[11px] uppercase tracking-widest text-ash-gray font-medium font-sohne">
+          <span className="text-[11px] uppercase tracking-widest text-slate-gray font-medium font-sohne">
             Draft Manuscripts
           </span>
           <div className="flex items-baseline gap-2 mt-1">
@@ -93,7 +93,7 @@ export default async function CreatorCoursesPage() {
         </div>
 
         <div className="flex flex-col gap-1 pl-0 md:pl-8 pt-4 md:pt-0">
-          <span className="text-[11px] uppercase tracking-widest text-ash-gray font-medium font-sohne">
+          <span className="text-[11px] uppercase tracking-widest text-slate-gray font-medium font-sohne">
             Cumulative Royalties
           </span>
           <div className="flex items-baseline gap-2 mt-1">

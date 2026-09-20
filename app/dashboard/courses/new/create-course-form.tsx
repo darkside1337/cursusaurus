@@ -60,11 +60,11 @@ export function CreateCourseForm() {
       {/* Editorial Header */}
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-ash-gray font-medium font-sohne">
+          <span className="text-xs uppercase tracking-wider text-slate-gray font-medium font-sohne">
             Course Formulation · Creator Studio
           </span>
-          <span className="inline-block size-1 rounded-full bg-ash-gray/60" />
-          <Badge className="bg-blush-peach text-sienna-brown border-none font-medium text-xs px-2.5 py-0.5 rounded-full">
+          <span className="inline-block size-1 rounded-full bg-slate-gray/40" />
+          <Badge variant="secondary" className="bg-mist-gray text-ink-black border border-hairline font-medium text-xs px-2.5 py-0.5 rounded-full">
             Drafting Mode
           </Badge>
         </div>
@@ -83,7 +83,7 @@ export function CreateCourseForm() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="title">Course title</Label>
-            <span className="text-xs text-ash-gray font-sohne">Required (3–100 chars)</span>
+            <span className="text-xs text-slate-gray font-sohne">Required (3–100 chars)</span>
           </div>
           <Input
             id="title"
@@ -103,7 +103,7 @@ export function CreateCourseForm() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="slug">Catalog URL Slug</Label>
-            <span className="text-xs text-ash-gray font-sohne">Auto-generated if empty</span>
+            <span className="text-xs text-slate-gray font-sohne">Auto-generated if empty</span>
           </div>
           <Input
             id="slug"
@@ -127,7 +127,7 @@ export function CreateCourseForm() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="description">Course syllabus & monograph</Label>
-            <span className="text-xs text-ash-gray font-sohne">
+            <span className="text-xs text-slate-gray font-sohne">
               {wordCount} / 600 words
             </span>
           </div>
@@ -174,7 +174,7 @@ export function CreateCourseForm() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="thumbnailUrl">Cover monograph & preview image URL</Label>
-            <span className="text-xs text-ash-gray font-sohne">Aspect ratio 16:9</span>
+            <span className="text-xs text-slate-gray font-sohne">Aspect ratio 16:9</span>
           </div>
           <Input
             id="thumbnailUrl"
@@ -191,7 +191,7 @@ export function CreateCourseForm() {
 
         {/* Editorial Review Process Notice */}
         <Card className="bg-mist-gray/60 border border-hairline rounded-[16px] p-4 flex items-start gap-3.5">
-          <CheckCircle2 className="size-5 text-sienna-brown shrink-0 mt-0.5" />
+          <CheckCircle2 className="size-5 text-slate-gray shrink-0 mt-0.5" />
           <div className="flex flex-col">
             <span className="text-xs font-medium text-ink-black font-sohne uppercase tracking-wider">
               Editorial Review Process
