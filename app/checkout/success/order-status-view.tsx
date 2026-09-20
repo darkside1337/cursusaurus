@@ -117,8 +117,18 @@ export function OrderStatusView({ sessionId }: { sessionId: string }) {
     return (
       <Card className="p-8 sm:p-10 bg-paper-white rounded-cards border border-hairline shadow-subtle flex flex-col gap-8">
         <div className="flex flex-col items-center text-center gap-4">
-          <div className="size-12 rounded-full bg-blush-peach/40 text-sienna-brown flex items-center justify-center">
-            <CheckCircle2 className="size-6 text-sienna-brown" />
+          <div
+            className={`size-12 rounded-full flex items-center justify-center ${
+              isSubscription
+                ? "bg-blush-peach/40 text-sienna-brown"
+                : "bg-mist-gray text-ink-black"
+            }`}
+          >
+            <CheckCircle2
+              className={`size-6 ${
+                isSubscription ? "text-sienna-brown" : "text-ink-black"
+              }`}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5 items-center">
@@ -163,7 +173,7 @@ export function OrderStatusView({ sessionId }: { sessionId: string }) {
           <div className="flex items-center justify-between text-slate-gray">
             <span>Fulfillment Status</span>
             <span className="text-ink-black font-medium flex items-center gap-1">
-              <ShieldCheck className="size-3.5 text-sienna-brown" />
+              <ShieldCheck className={`size-3.5 ${isSubscription ? "text-sienna-brown" : "text-ink-black"}`} />
               <span>Entitlement Confirmed</span>
             </span>
           </div>
@@ -251,20 +261,24 @@ export function OrderStatusView({ sessionId }: { sessionId: string }) {
     <Card className="p-8 sm:p-12 bg-paper-white rounded-cards border border-hairline shadow-subtle flex flex-col items-center text-center gap-6">
       <div className="relative flex items-center justify-center">
         <div className="size-16 rounded-full border-2 border-hairline border-t-ink-black animate-spin" />
-        <div className="absolute size-3 rounded-full bg-sienna-brown" />
+        <div className="absolute size-3 rounded-full bg-ink-black" />
       </div>
 
       <div className="flex flex-col gap-2">
-        <h2 className="font-serif text-2xl sm:text-3xl text-ink-black font-normal">
+        <h1 className="font-serif text-2xl sm:text-3xl text-ink-black font-normal">
           Confirming Order
-        </h2>
+        </h1>
         <p className="text-slate-gray text-sm leading-relaxed max-w-sm">
           Verifying payment authorization and enrolling course entitlements...
         </p>
       </div>
 
       <div className="w-full max-w-xs mt-2">
-        <Progress value={Math.min(100, Math.max(10, attempts * 10))} className="h-1 bg-mist-gray" />
+        <Progress
+          value={Math.min(100, Math.max(10, attempts * 10))}
+          className="h-1 bg-mist-gray"
+          aria-label="Order confirmation progress"
+        />
       </div>
     </Card>
   );

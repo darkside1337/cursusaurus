@@ -103,10 +103,10 @@ export function BillingContent({
         {/* Eyebrow & Page Heading */}
         <header className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="font-sohne text-xs uppercase tracking-widest text-ash-gray font-medium">
+            <span className="font-sohne text-xs uppercase tracking-widest text-slate-gray font-medium">
               Account Settings & Preferences
             </span>
-            <span className="font-mono text-xs text-ash-gray">
+            <span className="font-mono text-xs text-slate-gray">
               {user.email}
             </span>
           </div>
@@ -139,9 +139,9 @@ export function BillingContent({
         {/* Section 1: Membership Status */}
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <span className="font-sohne text-xs uppercase tracking-wider text-ash-gray font-medium">
+            <h2 className="font-sohne text-xs uppercase tracking-wider text-slate-gray font-medium">
               Membership Status
-            </span>
+            </h2>
           </div>
 
           {/* Active Subscription */}
@@ -270,7 +270,7 @@ export function BillingContent({
             <Card className="p-6 sm:p-8 bg-paper-white rounded-cards border border-hairline shadow-subtle flex flex-col gap-6">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-1">
-                  <h3 className="font-sohne text-lg font-medium text-ash-gray">
+                  <h3 className="font-sohne text-lg font-medium text-slate-gray">
                     No active subscription
                   </h3>
                   <span className="font-sohne text-xs text-slate-gray">
