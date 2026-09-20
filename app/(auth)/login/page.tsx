@@ -9,6 +9,7 @@ import { authClient } from "@/lib/auth-client";
 import { getSafeCallbackUrl } from "@/lib/callback-url";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 function GoogleIcon({ className = "size-[18px]" }: { className?: string }) {
   return (
@@ -81,17 +82,14 @@ function LoginCard() {
 
   return (
     <div className="flex flex-col w-full items-center justify-center font-sohne">
-      <Card className="w-full max-w-[420px] bg-paper-white rounded-cards p-8 sm:p-11 shadow-subtle border border-black/[0.05] flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
-        {/* Blush-peach glow per Stitch design spec */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-blush-peach/30 rounded-full blur-3xl pointer-events-none" />
-
+      <Card className="w-full max-w-[420px] bg-paper-white rounded-cards p-6 sm:p-10 shadow-subtle border border-black/[0.05] flex flex-col items-center text-center relative overflow-hidden transition-all duration-300">
         {/* Eyebrow */}
         <div className="mb-2.5 flex items-center justify-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-sienna-brown/40" />
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-gray/30" />
           <span className="text-[11px] uppercase tracking-widest text-slate-gray font-medium">
             Prospectus Access
           </span>
-          <span className="w-1.5 h-1.5 rounded-full bg-sienna-brown/40" />
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-gray/30" />
         </div>
 
         <h1 className="font-signifier text-[30px] font-normal text-ink-black tracking-tight leading-tight">
@@ -104,14 +102,20 @@ function LoginCard() {
           Deliberate, quiet learning for enrolled fellows & monograph subscribers.
         </p>
 
+        {/* Live region for async authentication announcements */}
+        <div aria-live="polite" className="sr-only">
+          {loadingProvider ? `Connecting to ${loadingProvider}…` : ""}
+        </div>
+
         <div className="w-full flex flex-col gap-3">
           {/* Google */}
           <Button
             type="button"
             variant="outline"
             disabled={loadingProvider !== null}
+            aria-busy={loadingProvider === "google"}
             onClick={() => handleSignIn("google")}
-            className="w-full h-12 rounded-buttons bg-paper-white hover:bg-mist-gray text-ink-black text-caption font-medium flex items-center justify-center gap-3 transition-all shadow-subtle hover:shadow-subtle-2 active:scale-[0.99]"
+            className="w-full h-12 rounded-buttons bg-paper-white hover:bg-mist-gray text-ink-black text-caption font-medium flex items-center justify-center gap-3 transition-all shadow-subtle hover:shadow-subtle-2 active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ink-black focus-visible:ring-offset-2"
           >
             {loadingProvider === "google" ? (
               <Loader2 className="size-[18px] animate-spin shrink-0 text-slate-gray" />
@@ -130,8 +134,9 @@ function LoginCard() {
             type="button"
             variant="default"
             disabled={loadingProvider !== null}
+            aria-busy={loadingProvider === "github"}
             onClick={() => handleSignIn("github")}
-            className="w-full h-12 rounded-buttons bg-ink-black hover:bg-ink-black/90 text-paper-white text-caption font-medium flex items-center justify-center gap-3 transition-all shadow-subtle hover:shadow-subtle-2 active:scale-[0.99]"
+            className="w-full h-12 rounded-buttons bg-ink-black hover:bg-ink-black/90 text-paper-white text-caption font-medium flex items-center justify-center gap-3 transition-all shadow-subtle hover:shadow-subtle-2 active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ink-black focus-visible:ring-offset-2"
           >
             {loadingProvider === "github" ? (
               <Loader2 className="size-[18px] animate-spin shrink-0 text-paper-white" />
@@ -148,18 +153,17 @@ function LoginCard() {
 
         {/* Soft Divider & Guest Action */}
         <div className="w-full flex items-center justify-center my-6 gap-3">
-          <div className="h-px bg-border flex-1" />
-          <span className="text-[11px] text-slate-gray uppercase tracking-widest font-medium">
+          <Separator className="flex-1" />
+          <span className="text-[11px] text-slate-gray uppercase tracking-widest font-medium shrink-0">
             or explore
           </span>
-          <div className="h-px bg-border flex-1" />
+          <Separator className="flex-1" />
         </div>
 
         <Button
           variant="ghost"
           render={<Link href="/" />}
-          nativeButton={false}
-          className="w-full h-10 rounded-buttons text-slate-gray hover:text-ink-black hover:bg-mist-gray text-caption font-medium transition-colors"
+          className="w-full h-11 rounded-buttons text-slate-gray hover:text-ink-black hover:bg-mist-gray text-caption font-medium transition-colors"
         >
           Browse syllabus as guest
         </Button>
