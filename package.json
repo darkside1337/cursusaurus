@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "audit:ui": "tsx scripts/audit-ui.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
+    "seed:clean": "tsx --env-file=.env scripts/seed.ts --clean",
     "browse": "tsx --env-file=.env scripts/browse.ts"
   },
   "dependencies": {

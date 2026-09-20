@@ -1,0 +1,19 @@
+{
+  "clips": {
+    "clip-a.mp4": {
+      "sha256": "b74c0109fa1f5b93742c7680e9853cde56db6393a60b910b50e6e23e54d4567f",
+      "bytes": 357814,
+      "durationSeconds": 20
+    },
+    "clip-b.mp4": {
+      "sha256": "4dbdc168664de3f1257a33daf99ec595c2988f8c62c083729b16bc39ced8a7f0",
+      "bytes": 359571,
+      "durationSeconds": 20
+    },
+    "clip-c.mp4": {
+      "sha256": "a2d34b93f80944c062f221aaf54ac0cb426bf78696eb712a9e693000ce17737e",
+      "bytes": 360042,
+      "durationSeconds": 20
+    }
+  }
+}

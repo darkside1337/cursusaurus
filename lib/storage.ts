@@ -10,7 +10,8 @@ export function getStorageClient(): SupabaseClient {
         "Supabase Storage credentials (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are not set in environment."
       );
     }
-    client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    const normalizedUrl = env.SUPABASE_URL.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
+    client = createClient(normalizedUrl, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   }
