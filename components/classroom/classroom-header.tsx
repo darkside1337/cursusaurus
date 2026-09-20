@@ -35,7 +35,7 @@ export function ClassroomHeader({
             <ChevronLeft className="h-4 w-4 mr-1" />
             <span>Back to course</span>
           </Button>
-          <span className="text-ash-gray/40">/</span>
+          <span className="text-slate-gray/40">/</span>
           <span className="font-sohne font-medium text-ink-black truncate">
             {courseTitle}
           </span>
@@ -50,6 +50,7 @@ export function ClassroomHeader({
             <Progress
               value={progressPercent}
               className="h-1 w-full bg-mist-gray rounded-full"
+              aria-label={`${courseTitle} completion progress`}
               aria-valuenow={progressPercent}
               aria-valuemin={0}
               aria-valuemax={100}

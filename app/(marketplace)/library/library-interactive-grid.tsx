@@ -93,12 +93,12 @@ export function LibraryInteractiveGrid({ summary }: LibraryInteractiveGridProps)
           </TabsList>
 
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ash-gray pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-gray pointer-events-none" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title or topic…"
-              className="pl-9 bg-fog-white border-hairline text-ink-black placeholder:text-ash-gray font-sohne text-sm rounded-inputs focus-visible:ring-ink-black/20"
+              className="pl-9 bg-fog-white border-hairline text-ink-black placeholder:text-slate-gray/70 font-sohne text-sm rounded-inputs focus-visible:ring-ink-black/20"
             />
           </div>
         </div>
@@ -117,13 +117,13 @@ export function LibraryInteractiveGrid({ summary }: LibraryInteractiveGridProps)
           ) : (
             <div className="py-16 text-center flex flex-col items-center justify-center gap-3 bg-fog-white/60 rounded-cards border border-hairline p-8">
               <BookOpen className="size-8 text-slate-gray/40 stroke-[1.5]" />
-              <h3 className="font-sohne text-base font-medium text-ink-black">
+              <h2 className="font-sohne text-base font-medium text-ink-black">
                 {searchQuery
                   ? "No matching syllabi found"
                   : activeTab === "in-progress"
                   ? "No syllabi currently in progress"
                   : "No completed syllabi yet"}
-              </h3>
+              </h2>
               <p className="font-sohne text-xs sm:text-sm text-slate-gray max-w-sm">
                 {searchQuery
                   ? `No course in your library matches "${searchQuery}". Clear your search to view all syllabi.`
@@ -167,7 +167,7 @@ function LibraryCourseCard({ course }: { course: LibraryCourseItem }) {
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-gray/40">
               <BookOpen className="size-8 stroke-[1.5]" />
-              <span className="text-[10px] font-medium tracking-widest uppercase text-ash-gray font-sohne">
+              <span className="text-[10px] font-medium tracking-widest uppercase text-slate-gray font-sohne">
                 {course.category}
               </span>
             </div>
@@ -196,14 +196,14 @@ function LibraryCourseCard({ course }: { course: LibraryCourseItem }) {
         </div>
 
         {/* Category & Title */}
-        <span className="text-[10px] font-medium tracking-widest uppercase text-ash-gray font-sohne block mb-1">
+        <span className="text-[10px] font-medium tracking-widest uppercase text-slate-gray font-sohne block mb-1">
           {course.category}
         </span>
-        <h3 className="font-sohne text-base font-medium text-ink-black leading-snug line-clamp-2 mb-1 group-hover:text-slate-gray transition-colors">
+        <h2 className="font-sohne text-base font-medium text-ink-black leading-snug line-clamp-2 mb-1 group-hover:text-slate-gray transition-colors">
           <Link href={course.nextLesson ? `/learn/${course.slug}/${course.nextLesson.slug}` : `/${course.slug}`}>
             {course.title}
           </Link>
-        </h3>
+        </h2>
         <p className="text-slate-gray text-xs font-sohne line-clamp-1 mb-4">
           {course.creatorName ?? "Cursusaurus Fellow"}
         </p>
@@ -218,7 +218,11 @@ function LibraryCourseCard({ course }: { course: LibraryCourseItem }) {
               {course.completedLessonsCount}/{course.lessonCount} lessons
             </span>
           </div>
-          <Progress value={course.progressPercentage} className="h-1.5" />
+          <Progress
+            value={course.progressPercentage}
+            className="h-1.5"
+            aria-label={`${course.title} completion progress`}
+          />
         </div>
 
         {/* Action Button */}
@@ -259,9 +263,9 @@ function ExploreMoreCard() {
           <Compass className="size-6 stroke-[1.5]" />
         </div>
         <div className="flex flex-col gap-1">
-          <h3 className="font-sohne text-base font-medium text-ink-black">
+          <h2 className="font-sohne text-base font-medium text-ink-black">
             Explore New Syllabi
-          </h3>
+          </h2>
           <p className="font-sohne text-xs text-slate-gray max-w-[220px]">
             Expand your editorial craftsmanship with newly published masterclasses.
           </p>

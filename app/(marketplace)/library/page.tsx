@@ -21,7 +21,7 @@ export default async function LibraryPage() {
     <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-14 flex flex-col gap-8">
       {/* Page Header */}
       <header className="flex flex-col gap-2">
-        <span className="font-sohne text-xs uppercase tracking-widest text-ash-gray font-medium">
+        <span className="font-sohne text-xs uppercase tracking-widest text-slate-gray font-medium">
           Member Workspace
         </span>
         <h1 className="font-serif text-3xl md:text-[44px] text-ink-black font-normal tracking-tight">

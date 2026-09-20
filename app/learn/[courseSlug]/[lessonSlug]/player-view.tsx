@@ -197,7 +197,7 @@ export function PlayerView({
 
             {/* 2. Lesson Title & Author Row */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-xs font-mono text-ash-gray font-medium">
+              <div className="flex items-center gap-2 text-xs font-mono text-slate-gray font-medium">
                 <span>Lecture {formattedIndex}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1 font-sohne">
@@ -227,6 +227,7 @@ export function PlayerView({
                     variant="outline"
                     size="sm"
                     render={<Link href={`/learn/${course.slug}/${previousLesson.slug}`} />}
+                    aria-label="Previous lesson"
                     className="rounded-full border-hairline text-slate-gray hover:text-ink-black text-xs font-sohne gap-1.5"
                   >
                     <ChevronLeft className="size-4" />
@@ -237,7 +238,8 @@ export function PlayerView({
                     variant="outline"
                     size="sm"
                     disabled
-                    className="rounded-full border-hairline text-ash-gray/50 text-xs font-sohne gap-1.5"
+                    aria-label="Previous lesson"
+                    className="rounded-full border-hairline text-slate-gray/40 text-xs font-sohne gap-1.5"
                   >
                     <ChevronLeft className="size-4" />
                     <span className="hidden sm:inline">Previous</span>
@@ -278,6 +280,7 @@ export function PlayerView({
                     variant="outline"
                     size="sm"
                     render={<Link href={`/learn/${course.slug}/${nextLesson.slug}`} />}
+                    aria-label="Next lesson"
                     className="rounded-full border-hairline text-slate-gray hover:text-ink-black text-xs font-sohne gap-1.5"
                   >
                     <span className="hidden sm:inline">Next</span>
@@ -288,7 +291,8 @@ export function PlayerView({
                     variant="outline"
                     size="sm"
                     disabled
-                    className="rounded-full border-hairline text-ash-gray/50 text-xs font-sohne gap-1.5"
+                    aria-label="Next lesson"
+                    className="rounded-full border-hairline text-slate-gray/40 text-xs font-sohne gap-1.5"
                   >
                     <span className="hidden sm:inline">Next</span>
                     <ChevronRight className="size-4" />
@@ -307,7 +311,7 @@ export function PlayerView({
                   {currentLesson.description}
                 </div>
               ) : (
-                <p className="font-sohne text-xs text-ash-gray italic">
+                <p className="font-sohne text-xs text-slate-gray italic">
                   No lecture notes attached to this lesson.
                 </p>
               )}
@@ -318,16 +322,16 @@ export function PlayerView({
           <aside className="lg:col-span-4 lg:sticky lg:top-20 flex flex-col gap-4">
             <Card className="rounded-[20px] bg-paper-white border border-hairline p-5 shadow-sm">
               <div className="border-b border-hairline pb-4 mb-4">
-                <h3 className="font-serif text-lg text-ink-black font-normal">
+                <h2 className="font-serif text-lg text-ink-black font-normal">
                   Curriculum Outline
-                </h3>
+                </h2>
                 <p className="font-sohne text-xs text-slate-gray mt-0.5">
                   {allLessons.length} {allLessons.length === 1 ? "lecture" : "lectures"} · {curriculumDurationLabel} instruction
                 </p>
               </div>
 
               {/* Lesson Items */}
-              <div className="flex flex-col gap-1.5" role="list">
+              <nav className="flex flex-col gap-1.5" aria-label="Curriculum lessons">
                 {allLessons.map((lesson, idx) => {
                   const lessonNum = (idx + 1).toString().padStart(2, "0");
                   const isCurrent = lesson.id === currentLesson.id;
@@ -344,7 +348,6 @@ export function PlayerView({
                           ? "bg-mist-gray text-ink-black font-medium"
                           : "hover:bg-mist-gray/50 text-slate-gray hover:text-ink-black"
                       }`}
-                      role="listitem"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         {/* Status Icon / Index */}
@@ -356,7 +359,7 @@ export function PlayerView({
                           ) : isCurrent ? (
                             <PlayCircle className="size-4 text-ink-black stroke-[2]" />
                           ) : (
-                            <span className="font-mono text-xs text-ash-gray font-medium">
+                            <span className="font-mono text-xs text-slate-gray font-medium">
                               {lessonNum}
                             </span>
                           )}
@@ -381,14 +384,14 @@ export function PlayerView({
                             All-Access
                           </Badge>
                         )}
-                        <span className="font-sohne text-[11px] text-ash-gray">
+                        <span className="font-sohne text-[11px] text-slate-gray">
                           {formatDuration(lesson.durationSeconds)}
                         </span>
                       </div>
                     </Link>
                   );
                 })}
-              </div>
+              </nav>
             </Card>
           </aside>
         </div>
