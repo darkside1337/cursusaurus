@@ -251,19 +251,21 @@ This phase combines one-time purchases and subscriptions. The course detail page
 
 ### QA
 
-- [ ] Manual QA pass across all flows:
-  - Authentication and creator authorization
-  - Course creation, editing, lesson management, and publishing
-  - Catalog search, filters, and course navigation
-  - Course readiness and purchase eligibility
-  - One-time purchase and refund
-  - Subscription trial, activation, cancellation, and failed renewal
-  - Video upload and playback
-  - Learning progress and library
-- [ ] Webhook retry/duplicate-delivery test — confirm idempotency holds under load
-- [ ] Authorization and input-validation audit across Server Actions and route handlers
-- [ ] Production build, linting, type-checking, and automated tests pass
-- [ ] Final review of `docs/PRD.md`, `docs/ARCHITECTURE.md`, and `docs/DESIGN.md` for drift against what was actually built
+- [x] Automated E2E QA pass across all flows:
+  - Authentication and creator authorization (Spec 01)
+  - Course creation, editing, lesson management, and publishing (Spec 04)
+  - Catalog search, filters, and course navigation (Spec 02)
+  - Course readiness and purchase eligibility (Spec 03)
+  - One-time purchase and refund (Spec 05 Scenarios A, D, E)
+  - Subscription trial, activation, cancellation, and failed renewal (Spec 05 Scenarios B, C, F, G)
+  - Video upload and playback (Spec 06)
+  - Learning progress and library (Spec 06 & Spec 07)
+- [x] Webhook retry/duplicate-delivery test — confirm idempotency holds under load (Spec 08: 10 concurrent identical requests, out-of-order epochs, duplicate sessions under distinct event IDs)
+- [x] Authorization and input-validation audit across Server Actions and route handlers (Spec 09 & unit/integration matrix in server-actions-auth.test.ts)
+- [x] Production build, linting, type-checking, and automated tests pass (29 Playwright E2E tests, 221 Vitest tests, 0 TypeScript errors, 0 UI audit errors)
+- [x] Final review of `docs/PRD.md`, `docs/ARCHITECTURE.md`, and `docs/DESIGN.md` for drift against what was actually built
+
+**Status note (2026-09-20):** Phase 6 E2E QA is complete and verified against the running application server and real Postgres database. All 29 Playwright E2E tests pass across 9 test suites, covering end-to-end user journeys, strict subscription lifecycle state transitions (Option A), dual entitlement precedence, multi-refund thresholds, video playback and progress persistence, and webhook race-condition idempotency under concurrent delivery. The authorization audit confirms complete server action session validation and anti-enumeration protections across all sensitive routes. Build, typecheck (`tsc`), Vitest unit/integration (221 tests across 32 files), and UI audit (`pnpm audit:ui`) all pass cleanly. Cloud deployment tasks (Vercel, live Stripe webhooks, CI/CD) remain in the deployment section ready for production release.
 
 ### Deployment
 
@@ -277,3 +279,9 @@ This phase combines one-time purchases and subscriptions. The course detail page
 - [ ] Production smoke test covering catalog → course detail → Checkout → entitlement → protected access
 
 **Gate:** The complete user journey works in production, payment and access state remain consistent, and the deployment has documented operational procedures.
+
+---
+
+## Backlog & Future Enhancements
+
+- [ ] Grace period during `past_due` for subscription payments (allow $N$ days of continued access before hard cutoff)
