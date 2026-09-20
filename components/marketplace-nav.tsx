@@ -233,11 +233,11 @@ export function MarketplaceNav({ user }: MarketplaceNavProps) {
       {/* Mobile Menu Panel */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-hairline bg-paper-white px-4 py-6 flex flex-col gap-5 animate-in slide-in-from-top-2 duration-150">
-          <nav className="flex flex-col gap-3 font-sohne" aria-label="Mobile Navigation">
+          <nav className="flex flex-col gap-2 font-sohne" aria-label="Mobile Navigation">
             <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
-              className={`text-base py-1.5 px-2 rounded-lg ${
+              className={`text-base py-3 px-3 rounded-lg flex items-center min-h-[44px] ${
                 isBrowseActive ? "bg-mist-gray text-ink-black font-medium" : "text-slate-gray hover:text-ink-black"
               }`}
             >
@@ -246,7 +246,7 @@ export function MarketplaceNav({ user }: MarketplaceNavProps) {
             <Link
               href="/pricing"
               onClick={() => setMobileMenuOpen(false)}
-              className={`text-base py-1.5 px-2 rounded-lg ${
+              className={`text-base py-3 px-3 rounded-lg flex items-center min-h-[44px] ${
                 isPricingActive ? "bg-mist-gray text-ink-black font-medium" : "text-slate-gray hover:text-ink-black"
               }`}
             >
@@ -256,7 +256,7 @@ export function MarketplaceNav({ user }: MarketplaceNavProps) {
               <Link
                 href="/library"
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-base py-1.5 px-2 text-slate-gray hover:text-ink-black"
+                className="text-base py-3 px-3 rounded-lg flex items-center min-h-[44px] text-slate-gray hover:text-ink-black"
               >
                 My Library
               </Link>
@@ -265,7 +265,7 @@ export function MarketplaceNav({ user }: MarketplaceNavProps) {
               <Link
                 href="/dashboard/courses"
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-base py-1.5 px-2 text-slate-gray hover:text-ink-black"
+                className="text-base py-3 px-3 rounded-lg flex items-center min-h-[44px] text-slate-gray hover:text-ink-black"
               >
                 Creator Studio
               </Link>

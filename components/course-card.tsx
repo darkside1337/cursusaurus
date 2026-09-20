@@ -48,7 +48,7 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
           ) : (
             <div className="size-full flex flex-col items-center justify-center gap-1.5 text-slate-gray">
               <BookOpen className="size-7 stroke-[1.5] text-slate-gray/60" />
-              <span className="text-[10px] font-medium tracking-widest uppercase text-ash-gray font-sohne">
+              <span className="text-[10px] font-medium tracking-widest uppercase text-slate-gray font-sohne">
                 {course.category} Monograph
               </span>
             </div>
@@ -83,7 +83,7 @@ export function CourseCard({ course, accessState = "none" }: CourseCardProps) {
 
       {/* Footer details strip: category · duration, then access state or price */}
       <div className="mt-5 pt-3 flex items-center justify-between bg-mist-gray/50 px-3 py-2 rounded-xl">
-        <span className="text-caption text-ash-gray font-medium font-sohne">
+        <span className="text-caption text-slate-gray font-medium font-sohne">
           {course.category}
           {durationStr ? ` • ${durationStr}` : ""}
         </span>

@@ -100,7 +100,7 @@ export function EnrollmentPanel({
     <Card className="p-6 bg-paper-white rounded-cards border border-hairline shadow-subtle flex flex-col gap-6">
       {/* Header / Price Display */}
       <div className="flex flex-col gap-1 border-b border-hairline pb-4">
-        <span className="font-sohne text-xs uppercase tracking-wider text-ash-gray font-medium">
+        <span className="font-sohne text-xs uppercase tracking-wider text-slate-gray font-medium">
           Acquisition & Access
         </span>
         <div className="flex items-baseline gap-2 mt-1">

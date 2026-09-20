@@ -121,10 +121,10 @@ export function CatalogContent({
       {/* Hero Section */}
       <section className="flex flex-col items-start gap-4 max-w-3xl">
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest font-medium text-ash-gray font-sohne">
+          <span className="text-xs uppercase tracking-widest font-medium text-slate-gray font-sohne">
             Curated Curriculum · Edition 2026
           </span>
-          <span className="inline-block size-1 rounded-full bg-ash-gray/60" />
+          <span className="inline-block size-1 rounded-full bg-slate-gray/60" />
           <Badge className="bg-mist-gray text-ink-black border-none text-[11px] font-medium px-2 py-0.5 rounded-full">
             {courses.length} masterclasses
           </Badge>
@@ -148,7 +148,7 @@ export function CatalogContent({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by topic, instructor, or monograph title..."
-            className="pl-11 pr-10 h-12 rounded-inputs bg-paper-white border border-hairline focus-visible:border-ink-black focus-visible:ring-1 focus-visible:ring-ink-black/20 text-sm shadow-none"
+            className="pl-11 pr-11 h-12 rounded-inputs bg-paper-white border border-hairline focus-visible:border-ink-black focus-visible:ring-1 focus-visible:ring-ink-black/20 text-sm shadow-none"
             aria-label="Search courses"
           />
           {searchQuery && (
@@ -156,7 +156,7 @@ export function CatalogContent({
               variant="ghost"
               size="icon"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 size-7 text-slate-gray hover:text-ink-black"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 size-9 text-slate-gray hover:text-ink-black"
               aria-label="Clear search"
             >
               <X className="size-4" />
@@ -167,7 +167,7 @@ export function CatalogContent({
         {/* Category Pills (horizontally scrolling on mobile per docs/DESIGN.md) */}
         <div
           className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 flex-nowrap md:flex-wrap"
-          role="tablist"
+          role="group"
           aria-label="Course categories"
         >
           {CATALOG_CATEGORIES.map((cat) => {
@@ -176,8 +176,7 @@ export function CatalogContent({
               <Button
                 key={cat}
                 type="button"
-                role="tab"
-                aria-selected={isSelected}
+                aria-pressed={isSelected}
                 variant={isSelected ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveCategory(cat)}
@@ -236,34 +235,34 @@ export function CatalogContent({
               {filteredCourses.length === 1 ? "course" : "courses"}
             </span>
             <span className="inline-block size-1.5 rounded-full bg-mist-gray" />
-            <span className="text-caption text-ash-gray font-sohne">
+            <span className="text-caption text-slate-gray font-sohne">
               Volume 2026
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-caption font-sohne">
+          <div className="hidden sm:flex items-center gap-2 text-caption font-sohne">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setSortMode("recent")}
-              className={`h-auto p-0 text-caption transition-colors ${
+              className={`h-9 px-2.5 text-caption transition-colors ${
                 sortMode === "recent"
                   ? "text-ink-black font-medium"
-                  : "text-ash-gray hover:text-ink-black"
+                  : "text-slate-gray hover:text-ink-black"
               }`}
             >
               Recent releases
             </Button>
-            <span className="text-ash-gray" aria-hidden>
+            <span className="text-slate-gray" aria-hidden>
               ·
             </span>
             <Button
               type="button"
               variant="ghost"
               onClick={() => setSortMode("curated")}
-              className={`h-auto p-0 text-caption transition-colors ${
+              className={`h-9 px-2.5 text-caption transition-colors ${
                 sortMode === "curated"
                   ? "text-ink-black font-medium"
-                  : "text-ash-gray hover:text-ink-black"
+                  : "text-slate-gray hover:text-ink-black"
               }`}
             >
               Curator&rsquo;s picks

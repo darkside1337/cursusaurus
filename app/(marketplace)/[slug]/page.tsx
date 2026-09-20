@@ -110,19 +110,19 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
         </Button>
       </div>
 
-      {/* Main Two-Column Layout (Mobile-first: stacked on mobile, 2-col on lg) */}
+      {/* Main Two-Column Layout (Mobile-first: Header/media -> Enrollment -> Description/Curriculum; on lg: 2-column grid with sticky enrollment panel) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-        {/* Left / Main Content: Monograph Details & Curriculum Syllabus (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
+        {/* Left Column Part 1: Header Info & Media (8 cols on lg) */}
+        <div className="lg:col-span-8 lg:col-start-1 lg:row-start-1 flex flex-col gap-8">
           {/* Header Info */}
           <header className="flex flex-col gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs uppercase tracking-wider font-medium text-ash-gray font-sohne">
+              <span className="text-xs uppercase tracking-wider font-medium text-slate-gray font-sohne">
                 {course.category} Monograph
               </span>
-              <span className="inline-block size-1 rounded-full bg-ash-gray/60" />
+              <span className="inline-block size-1 rounded-full bg-slate-gray/60" />
               {!course.isPublished ? (
-                <Badge variant="outline" className="text-amber-800 border-amber-300 bg-amber-50 text-xs px-2.5 py-0.5 rounded-full">
+                <Badge variant="outline" className="text-ink-black border-hairline bg-mist-gray text-xs px-2.5 py-0.5 rounded-full font-medium">
                   Draft Preview (Creator only)
                 </Badge>
               ) : isComingSoon ? (
@@ -162,13 +162,27 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
             ) : (
               <div className="size-full flex flex-col items-center justify-center gap-2 text-slate-gray">
                 <BookOpen className="size-12 stroke-[1.25] text-slate-gray/50" />
-                <span className="text-xs font-medium tracking-widest uppercase text-ash-gray font-sohne">
+                <span className="text-xs font-medium tracking-widest uppercase text-slate-gray font-sohne">
                   Cursusaurus Curriculum
                 </span>
               </div>
             )}
           </div>
+        </div>
 
+        {/* Right Column: Pricing & Enrollment Panel (4 cols on lg, sticky; immediately follows media on mobile) */}
+        <aside className="lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24 flex flex-col gap-6">
+          <EnrollmentPanel
+            course={course}
+            isEnrolled={isEnrolled}
+            isOwned={isOwned}
+            hasSubscription={hasSubscription}
+            userId={userId}
+          />
+        </aside>
+
+        {/* Left Column Part 2: Syllabus Description & Curriculum (8 cols on lg) */}
+        <div className="lg:col-span-8 lg:col-start-1 lg:row-start-2 flex flex-col gap-8">
           {/* Syllabus Monograph Description */}
           {course.description && (
             <section className="flex flex-col gap-2 pt-2 border-t border-hairline">
@@ -187,7 +201,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               <h2 className="font-serif text-xl sm:text-2xl text-ink-black font-normal">
                 Curriculum Structure
               </h2>
-              <div className="flex items-center gap-3 text-xs text-ash-gray font-sohne font-medium">
+              <div className="flex items-center gap-3 text-xs text-slate-gray font-sohne font-medium">
                 <span className="flex items-center gap-1">
                   <Layers className="size-3.5" />
                   {course.lessons.length} {course.lessons.length === 1 ? "lesson" : "lessons"}
@@ -221,15 +235,21 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                         className="p-4 bg-paper-white group-hover:bg-mist-gray/40 rounded-smallcards border border-hairline flex items-center justify-between gap-4 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="font-mono text-xs text-ash-gray font-medium shrink-0">
+                          <span className="font-mono text-xs text-slate-gray font-medium shrink-0">
                             {lessonNumber}
                           </span>
 
                           <div className="size-8 rounded-lg bg-mist-gray flex items-center justify-center text-slate-gray shrink-0">
                             {canWatch ? (
-                              <PlayCircle className="size-4 text-ink-black" />
+                              <>
+                                <PlayCircle className="size-4 text-ink-black" />
+                                <span className="sr-only">Available to play</span>
+                              </>
                             ) : (
-                              <Lock className="size-3.5 text-ash-gray" />
+                              <>
+                                <Lock className="size-3.5 text-slate-gray" />
+                                <span className="sr-only">Locked lesson</span>
+                              </>
                             )}
                           </div>
 
@@ -249,9 +269,10 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                           {lesson.isPreview && (
                             <Badge className="bg-mist-gray text-ink-black border border-hairline text-[10px] px-2 py-0 rounded-full font-medium">
                               Free Preview
+                              <span className="sr-only">(Free preview)</span>
                             </Badge>
                           )}
-                          <span className="text-xs text-ash-gray font-sohne font-medium">
+                          <span className="text-xs text-slate-gray font-sohne font-medium">
                             {formatDuration(lesson.durationSeconds)}
                           </span>
                         </div>
@@ -273,17 +294,6 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
             )}
           </section>
         </div>
-
-        {/* Right Column: Pricing & Enrollment Panel (4 cols, sticky on lg) */}
-        <aside className="lg:col-span-4 lg:sticky lg:top-24 flex flex-col gap-6">
-          <EnrollmentPanel
-            course={course}
-            isEnrolled={isEnrolled}
-            isOwned={isOwned}
-            hasSubscription={hasSubscription}
-            userId={userId}
-          />
-        </aside>
       </div>
     </div>
   );
