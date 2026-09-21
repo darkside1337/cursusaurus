@@ -173,7 +173,7 @@ describe("Spec 09: Server Actions Authorization & Service Audit", () => {
         positionSeconds: 120,
       });
       expect(res.success).toBe(false);
-      expect(res.error).toMatch(/unauthorized/i);
+      expect(res.error).toMatch(/authentication required|unauthorized/i);
     });
 
     it("rejects unauthenticated user attempting to toggle completion", async () => {
@@ -185,7 +185,7 @@ describe("Spec 09: Server Actions Authorization & Service Audit", () => {
         completed: true,
       });
       expect(res.success).toBe(false);
-      expect(res.error).toMatch(/unauthorized/i);
+      expect(res.error).toMatch(/authentication required|unauthorized/i);
     });
   });
 });

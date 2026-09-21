@@ -275,6 +275,24 @@ These are architectural constraints, not just conventions. Violating them breaks
 | Video access        | `hasAccess()` check on every signed-URL request — no cached client-side state |
 | Signed URL lifetime | 60-second presigned Supabase Storage GET URLs                                 |
 | Webhook idempotency | Unique constraint on `processed_stripe_events.event_id`                      |
+| Callback URLs       | `getSafeCallbackUrl()` enforces relative path format, rejecting protocol-relative (`//`, `/\\`), CRLF injection, and pseudo-protocols (`javascript:`, `data:`) |
+
+### Server Action Security Boundary
+
+All mutating Server Actions are hardened using a defense-in-depth pipeline:
+
+1. **Authentication Boundary (`safeAction`):** Enforces active user session via `getServerSession()` before invoking the action handler.
+2. **Action-Boundary Validation:** Zod schemas parse and validate all incoming payloads (e.g. `httpsUrlSchema` enforcing native HTTPS protocol for thumbnails, `recordPlaybackSchema` rejecting `NaN`, `Infinity`, negative, or fractional playback positions before any DB branches).
+3. **Explicit Domain Authorization:** Resource-specific ownership checks (e.g., `assertCreatorAuthorized(courseId)`) are kept explicit inside action handlers, never masked inside generic abstractions.
+4. **Error Normalization & Sanitization:** Intentional domain errors throw `ActionError` to surface safe client messages. Unexpected database, ORM, third-party API, or runtime errors are logged server-side via `logActionError` (with safe identifiers only) and replaced with a generic message (`"An unexpected error occurred. Please try again."`), preventing table, column, SQL, or stack-trace leakage.
+
+### CSRF Posture
+
+Server Actions in Next.js 16 execute exclusively via `POST` requests dispatched with internal action identifiers and framework-level Origin/Host header validation. Programmatic Server Actions invoked via client functions rely on these framework-verified protections; callback URLs are sanitized server-side.
+
+### Checkout Rate Limiting Policy (M3)
+
+Request-level checkout rate limiting is intentionally **deferred** from this phase until there is a demonstrated operational requirement. Domain business invariants (such as Invariant #11 enforcing a single active subscription per user, Invariant #12 enforcing a single completed purchase per course, and P3-1 trial abuse checks) govern domain state and prevent duplicate enrollments, but are distinct from request-level rate limiting.
 
 ---
 
