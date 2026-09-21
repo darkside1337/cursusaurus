@@ -17,26 +17,28 @@ export async function updateLessonProgress(
 ): Promise<LessonProgress> {
   const validated = updateProgressSchema.parse(input);
 
-  const [course] = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.id, validated.courseId))
-    .limit(1);
+  // Course and lesson lookups are independent — fetch in parallel
+  const [[course], [lesson]] = await Promise.all([
+    db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, validated.courseId))
+      .limit(1),
+    db
+      .select()
+      .from(lessons)
+      .where(
+        and(
+          eq(lessons.id, validated.lessonId),
+          eq(lessons.courseId, validated.courseId)
+        )
+      )
+      .limit(1),
+  ]);
 
   if (!course) {
     throw new Error(`Course "${validated.courseId}" not found`);
   }
-
-  const [lesson] = await db
-    .select()
-    .from(lessons)
-    .where(
-      and(
-        eq(lessons.id, validated.lessonId),
-        eq(lessons.courseId, validated.courseId)
-      )
-    )
-    .limit(1);
 
   if (!lesson) {
     throw new Error(
@@ -44,10 +46,21 @@ export async function updateLessonProgress(
     );
   }
 
-  // Authorization check: creator or active entitlement
-  const isAllowed =
-    validated.userId === course.creatorId ||
-    (await hasAccess(validated.userId, validated.courseId));
+  // Authorization check + existing progress fetch are independent — run in parallel
+  const isCreator = validated.userId === course.creatorId;
+  const [[existing], isAllowed] = await Promise.all([
+    db
+      .select()
+      .from(lessonProgress)
+      .where(
+        and(
+          eq(lessonProgress.userId, validated.userId),
+          eq(lessonProgress.lessonId, validated.lessonId)
+        )
+      )
+      .limit(1),
+    isCreator ? Promise.resolve(true) : hasAccess(validated.userId, validated.courseId),
+  ]);
 
   if (!isAllowed) {
     throw new Error(
@@ -70,18 +83,6 @@ export async function updateLessonProgress(
     lesson.durationSeconds > 0 &&
     clampedPosition > 0 &&
     clampedPosition >= Math.ceil(lesson.durationSeconds * 0.9);
-
-  // Check existing progress to maintain sticky completion
-  const [existing] = await db
-    .select()
-    .from(lessonProgress)
-    .where(
-      and(
-        eq(lessonProgress.userId, validated.userId),
-        eq(lessonProgress.lessonId, validated.lessonId)
-      )
-    )
-    .limit(1);
 
   const shouldBeCompleted = existing?.completed === true || autoCompleteCondition;
 
@@ -117,26 +118,28 @@ export async function setLessonCompletion(
 ): Promise<LessonProgress> {
   const validated = setCompletionSchema.parse(input);
 
-  const [course] = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.id, validated.courseId))
-    .limit(1);
+  // Course and lesson lookups are independent — fetch in parallel
+  const [[course], [lesson]] = await Promise.all([
+    db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, validated.courseId))
+      .limit(1),
+    db
+      .select()
+      .from(lessons)
+      .where(
+        and(
+          eq(lessons.id, validated.lessonId),
+          eq(lessons.courseId, validated.courseId)
+        )
+      )
+      .limit(1),
+  ]);
 
   if (!course) {
     throw new Error(`Course "${validated.courseId}" not found`);
   }
-
-  const [lesson] = await db
-    .select()
-    .from(lessons)
-    .where(
-      and(
-        eq(lessons.id, validated.lessonId),
-        eq(lessons.courseId, validated.courseId)
-      )
-    )
-    .limit(1);
 
   if (!lesson) {
     throw new Error(
@@ -144,27 +147,27 @@ export async function setLessonCompletion(
     );
   }
 
-  // Authorization check: creator or active entitlement
-  const isAllowed =
-    validated.userId === course.creatorId ||
-    (await hasAccess(validated.userId, validated.courseId));
+  // Authorization check + existing progress fetch are independent — run in parallel
+  const isCreator = validated.userId === course.creatorId;
+  const [[existing], isAllowed] = await Promise.all([
+    db
+      .select()
+      .from(lessonProgress)
+      .where(
+        and(
+          eq(lessonProgress.userId, validated.userId),
+          eq(lessonProgress.lessonId, validated.lessonId)
+        )
+      )
+      .limit(1),
+    isCreator ? Promise.resolve(true) : hasAccess(validated.userId, validated.courseId),
+  ]);
 
   if (!isAllowed) {
     throw new Error(
       "Access denied: user does not hold an active entitlement for this course"
     );
   }
-
-  const [existing] = await db
-    .select()
-    .from(lessonProgress)
-    .where(
-      and(
-        eq(lessonProgress.userId, validated.userId),
-        eq(lessonProgress.lessonId, validated.lessonId)
-      )
-    )
-    .limit(1);
 
   const lastPosition = existing?.lastPositionSeconds ?? 0;
 

@@ -60,32 +60,62 @@ export async function getLearnerLibrary(userId: string): Promise<LearnerLibraryS
       .orderBy(asc(courses.title));
   }
 
-  // 3. For each accessible course, compute progress, lessons, and next resume lesson
-  const libraryItems: LibraryCourseItem[] = [];
+  if (targetCourseRows.length === 0) {
+    return {
+      courses: [],
+      metrics: { activeSyllabiCount: 0, hoursMastered: 0, completedSyllabiCount: 0 },
+      isSubscriptionPastDue: false,
+      hasAllAccess,
+    };
+  }
 
-  for (const { course, creatorName } of targetCourseRows) {
-    const courseLessons = await db
+  const targetCourseIds = targetCourseRows.map((r) => r.course.id);
+
+  // 3. Batch-fetch lessons, progress records, and subscription status in parallel
+  //    (eliminates 2K serial queries — was 2 round-trips per accessible course)
+  const [allLessons, allProgress, subRow] = await Promise.all([
+    db
       .select()
       .from(lessons)
-      .where(eq(lessons.courseId, course.id))
-      .orderBy(asc(lessons.orderIndex));
-
-    // Exclude published courses that have 0 lessons (Coming Soon per PRD §8)
-    if (courseLessons.length === 0) {
-      continue;
-    }
-
-    const progressRecords = await db
+      .where(inArray(lessons.courseId, targetCourseIds))
+      .orderBy(asc(lessons.courseId), asc(lessons.orderIndex)),
+    db
       .select()
       .from(lessonProgress)
       .where(
         and(
           eq(lessonProgress.userId, userId),
-          eq(lessonProgress.courseId, course.id)
+          inArray(lessonProgress.courseId, targetCourseIds)
         )
-      );
+      ),
+    db
+      .select({ status: subscriptions.status })
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
 
-    const progressMap = new Map(progressRecords.map((p) => [p.lessonId, p]));
+  // Group lessons and progress by courseId in memory
+  const lessonsByCourse = new Map<string, (typeof allLessons)[number][]>();
+  for (const lesson of allLessons) {
+    const arr = lessonsByCourse.get(lesson.courseId) ?? [];
+    arr.push(lesson);
+    lessonsByCourse.set(lesson.courseId, arr);
+  }
+
+  const progressByLesson = new Map(allProgress.map((p) => [p.lessonId, p]));
+
+  // 4. Compute per-course stats — loop body is now fully synchronous
+  const libraryItems: LibraryCourseItem[] = [];
+
+  for (const { course, creatorName } of targetCourseRows) {
+    const courseLessons = lessonsByCourse.get(course.id) ?? [];
+
+    // Exclude published courses that have 0 lessons (Coming Soon per PRD §8)
+    if (courseLessons.length === 0) {
+      continue;
+    }
 
     let completedCount = 0;
     let completedDuration = 0;
@@ -95,7 +125,7 @@ export async function getLearnerLibrary(userId: string): Promise<LearnerLibraryS
     for (const l of courseLessons) {
       const duration = l.durationSeconds ?? 0;
       totalDuration += duration;
-      const progress = progressMap.get(l.id);
+      const progress = progressByLesson.get(l.id);
 
       if (progress?.completed) {
         completedCount++;
@@ -145,7 +175,7 @@ export async function getLearnerLibrary(userId: string): Promise<LearnerLibraryS
     });
   }
 
-  // 4. Compute workspace metrics strictly over accessible courses
+  // 5. Compute workspace metrics strictly over accessible courses
   const activeSyllabiCount = libraryItems.filter(
     (item) => item.completedLessonsCount > 0
   ).length;
@@ -160,14 +190,7 @@ export async function getLearnerLibrary(userId: string): Promise<LearnerLibraryS
     (item) => item.isCompleted
   ).length;
 
-  // 5. Check if subscription is past_due for dunning alerts
-  const [sub] = await db
-    .select({ status: subscriptions.status })
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, userId))
-    .limit(1);
-
-  const isSubscriptionPastDue = sub?.status === "past_due";
+  const isSubscriptionPastDue = subRow?.status === "past_due";
 
   return {
     courses: libraryItems,

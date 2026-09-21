@@ -43,33 +43,44 @@ export async function listPublishedCourses(): Promise<CatalogCourseItem[]> {
     .where(eq(courses.isPublished, true))
     .orderBy(desc(courses.createdAt));
 
-  const items: CatalogCourseItem[] = await Promise.all(
-    rows.map(async ({ course, creatorName }) => {
-      const courseLessons = await listLessonsByCourse(course.id);
-      const readiness = calculateCourseReadiness(course, courseLessons);
+  if (rows.length === 0) return [];
 
-      return {
-        ...course,
-        creatorName,
-        lessonCount: courseLessons.length,
-        totalDurationSeconds: readiness.totalDurationSeconds,
-        readiness,
-      };
-    })
-  );
+  // Batch-fetch all lessons for all courses in a single query (eliminates N+1)
+  const courseIds = rows.map((r) => r.course.id);
+  const allLessons = await db
+    .select()
+    .from(lessons)
+    .where(inArray(lessons.courseId, courseIds))
+    .orderBy(asc(lessons.courseId), asc(lessons.orderIndex));
 
-  return items;
+  const lessonsByCourse = new Map<string, Lesson[]>();
+  for (const lesson of allLessons) {
+    const arr = lessonsByCourse.get(lesson.courseId) ?? [];
+    arr.push(lesson);
+    lessonsByCourse.set(lesson.courseId, arr);
+  }
+
+  return rows.map(({ course, creatorName }) => {
+    const courseLessons = lessonsByCourse.get(course.id) ?? [];
+    const readiness = calculateCourseReadiness(course, courseLessons);
+    return {
+      ...course,
+      creatorName,
+      lessonCount: courseLessons.length,
+      totalDurationSeconds: readiness.totalDurationSeconds,
+      readiness,
+    };
+  });
 }
 
-export async function listCoursesByCreator(creatorId: string): Promise<Course[]> {
-  return db
-    .select()
-    .from(courses)
-    .where(eq(courses.creatorId, creatorId));
+export async function listCoursesByCreator(
+  creatorId: string,
+): Promise<Course[]> {
+  return db.select().from(courses).where(eq(courses.creatorId, creatorId));
 }
 
 export async function listCoursesWithStatsByCreator(
-  creatorId: string
+  creatorId: string,
 ): Promise<CreatorDashboardData> {
   const creatorCourses = await db
     .select()
@@ -79,36 +90,53 @@ export async function listCoursesWithStatsByCreator(
 
   const creatorCourseIds = creatorCourses.map((c) => c.id);
 
+  if (creatorCourseIds.length === 0) {
+    return {
+      courses: [],
+      stats: { totalStudents: 0, publishedCount: 0, draftCount: 0, royaltiesCents: 0 },
+    };
+  }
+
+  // Parallelise all independent DB calls after courseIds is known (eliminates N+1 + serial waits)
+  const [allLessons, salesByCourseId, { totalStudents, royaltiesCents }] = await Promise.all([
+    db
+      .select()
+      .from(lessons)
+      .where(inArray(lessons.courseId, creatorCourseIds))
+      .orderBy(asc(lessons.courseId), asc(lessons.orderIndex)),
+    countCourseSales(creatorCourseIds),
+    computeCreatorEngagement(creatorCourseIds),
+  ]);
+
+  // Group lessons by course in memory
+  const lessonsByCourse = new Map<string, Lesson[]>();
+  for (const lesson of allLessons) {
+    const arr = lessonsByCourse.get(lesson.courseId) ?? [];
+    arr.push(lesson);
+    lessonsByCourse.set(lesson.courseId, arr);
+  }
+
   let publishedCount = 0;
   let draftCount = 0;
 
-  const salesByCourseId: Record<string, number> =
-    creatorCourseIds.length > 0 ? await countCourseSales(creatorCourseIds) : {};
+  const coursesWithStats: CreatorCourseItem[] = creatorCourses.map((course) => {
+    const courseLessons = lessonsByCourse.get(course.id) ?? [];
+    const readiness = calculateCourseReadiness(course, courseLessons);
 
-  const coursesWithStats: CreatorCourseItem[] = await Promise.all(
-    creatorCourses.map(async (course) => {
-      const courseLessons = await listLessonsByCourse(course.id);
-      const readiness = calculateCourseReadiness(course, courseLessons);
+    if (course.isPublished) {
+      publishedCount++;
+    } else {
+      draftCount++;
+    }
 
-      if (course.isPublished) {
-        publishedCount++;
-      } else {
-        draftCount++;
-      }
-
-      return {
-        ...course,
-        lessonCount: courseLessons.length,
-        totalDurationSeconds: readiness.totalDurationSeconds,
-        salesCount: salesByCourseId[course.id] ?? 0,
-        readiness,
-      };
-    })
-  );
-
-  const { totalStudents, royaltiesCents } = creatorCourseIds.length
-    ? await computeCreatorEngagement(creatorCourseIds)
-    : { totalStudents: 0, royaltiesCents: 0 };
+    return {
+      ...course,
+      lessonCount: courseLessons.length,
+      totalDurationSeconds: readiness.totalDurationSeconds,
+      salesCount: salesByCourseId[course.id] ?? 0,
+      readiness,
+    };
+  });
 
   return {
     courses: coursesWithStats,
@@ -122,7 +150,7 @@ export async function listCoursesWithStatsByCreator(
 }
 
 async function countCourseSales(
-  courseIds: string[]
+  courseIds: string[],
 ): Promise<Record<string, number>> {
   const rows = await db
     .select({ courseId: entitlements.courseId, recordCount: count() })
@@ -131,13 +159,13 @@ async function countCourseSales(
       and(
         eq(entitlements.source, "purchase"),
         isNull(entitlements.revokedAt),
-        inArray(entitlements.courseId, courseIds)
-      )
+        inArray(entitlements.courseId, courseIds),
+      ),
     )
     .groupBy(entitlements.courseId);
 
   return Object.fromEntries(
-    rows.map((r) => [r.courseId as string, Number(r.recordCount)])
+    rows.map((r) => [r.courseId as string, Number(r.recordCount)]),
   );
 }
 
@@ -156,9 +184,9 @@ async function computeCreatorEngagement(courseIds: string[]) {
         isNull(entitlements.revokedAt),
         or(
           inArray(entitlements.courseId, courseIds),
-          isNull(entitlements.courseId)
-        )
-      )
+          isNull(entitlements.courseId),
+        ),
+      ),
     );
 
   const studentSet = new Set<string>();
@@ -191,7 +219,7 @@ export async function getLessonById(lessonId: string): Promise<Lesson | null> {
 
 export async function getLessonBySlug(
   courseId: string,
-  slug: string
+  slug: string,
 ): Promise<Lesson | null> {
   const [lesson] = await db
     .select()
@@ -212,12 +240,12 @@ export async function listLessonsByCourse(courseId: string): Promise<Lesson[]> {
 
 export function calculateCourseReadiness(
   course: Course,
-  lessonsList: Lesson[]
+  lessonsList: Lesson[],
 ): CourseReadiness {
   const lessonCount = lessonsList.length;
   const totalDurationSeconds = lessonsList.reduce(
     (acc, l) => acc + (l.durationSeconds ?? 0),
-    0
+    0,
   );
   const isPurchaseEligible = course.isPublished && lessonCount >= 1;
   let status: CourseReadinessStatus = "draft";
@@ -235,7 +263,7 @@ export function calculateCourseReadiness(
 }
 
 export async function getCourseWithLessons(
-  courseIdOrSlug: string
+  courseIdOrSlug: string,
 ): Promise<CourseWithLessons | null> {
   const [row] = await db
     .select({
@@ -261,7 +289,7 @@ export async function getCourseWithLessons(
 }
 
 export async function getCourseReadiness(
-  courseId: string
+  courseId: string,
 ): Promise<CourseReadiness | null> {
   const course = await getCourseById(courseId);
   if (!course) return null;

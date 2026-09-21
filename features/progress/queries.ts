@@ -30,24 +30,24 @@ export async function getCourseProgress(
   userId: string,
   courseId: string
 ): Promise<CourseProgressSummary> {
-  // Total lessons in course from lessons table (denominator)
-  const courseLessons = await db
-    .select({ id: lessons.id })
-    .from(lessons)
-    .where(eq(lessons.courseId, courseId));
+  // Total lessons (denominator) and learner progress are independent — fetch in parallel
+  const [courseLessons, records] = await Promise.all([
+    db
+      .select({ id: lessons.id })
+      .from(lessons)
+      .where(eq(lessons.courseId, courseId)),
+    db
+      .select()
+      .from(lessonProgress)
+      .where(
+        and(
+          eq(lessonProgress.userId, userId),
+          eq(lessonProgress.courseId, courseId)
+        )
+      ),
+  ]);
 
   const totalLessonsCount = courseLessons.length;
-
-  const records = await db
-    .select()
-    .from(lessonProgress)
-    .where(
-      and(
-        eq(lessonProgress.userId, userId),
-        eq(lessonProgress.courseId, courseId)
-      )
-    );
-
   const completedLessonsCount = records.filter((r) => r.completed).length;
   const percentage =
     totalLessonsCount === 0
