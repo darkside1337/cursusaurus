@@ -18,6 +18,7 @@
 /playwright/.cache/
 /.playwright-mcp/
 *.png
+!public/demo/screenshots/*.png
 
 # next.js
 /.next/

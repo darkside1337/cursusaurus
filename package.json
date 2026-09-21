@@ -13,7 +13,8 @@
     "audit:ui": "tsx scripts/audit-ui.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "seed:clean": "tsx --env-file=.env scripts/seed.ts --clean",
-    "browse": "tsx --env-file=.env scripts/browse.ts"
+    "browse": "tsx --env-file=.env scripts/browse.ts",
+    "screenshots": "tsx --env-file=.env scripts/capture-screenshots.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
