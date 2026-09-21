@@ -4,9 +4,11 @@ import { courses, lessons } from "@/lib/db/schema";
 import { getStorageClient } from "@/lib/storage";
 import { hasAccess } from "@/features/entitlements/access";
 import { signedPlaybackUrlSchema } from "./schemas";
-import type { SignedPlaybackUrlInput, SignedPlaybackUrlResult } from "./types";
-
-const VIDEO_BUCKET = "course-videos";
+import {
+  VIDEO_BUCKET,
+  type SignedPlaybackUrlInput,
+  type SignedPlaybackUrlResult,
+} from "./types";
 
 /**
  * Issues a short-lived signed playback URL for a course lesson video.

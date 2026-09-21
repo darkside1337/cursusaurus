@@ -5,12 +5,11 @@ import { getStorageClient } from "@/lib/storage";
 import { getUploadUrlSchema, saveLessonVideoSchema } from "./schemas";
 import {
   MAX_VIDEO_BYTES,
+  VIDEO_BUCKET,
   type GetUploadUrlInput,
   type UploadUrlResult,
   type SaveLessonVideoInput,
 } from "./types";
-
-const VIDEO_BUCKET = "course-videos";
 
 export async function getLessonVideoUploadUrl(
   input: GetUploadUrlInput

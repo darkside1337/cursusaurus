@@ -1,6 +1,7 @@
 export type SupportedVideoExtension = "mp4" | "webm" | "mov";
 
 export const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 MB
+export const VIDEO_BUCKET = "course-videos" as const;
 
 export interface GetUploadUrlInput {
   userId: string;
