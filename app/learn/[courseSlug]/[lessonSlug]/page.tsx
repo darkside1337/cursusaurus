@@ -12,6 +12,28 @@ interface LearnPageProps {
   }>;
 }
 
+// Strict client data boundary:
+// videoKey and raw storage paths are NEVER included in this shape.
+function sanitizeLesson(l: {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  durationSeconds: number | null;
+  orderIndex: number;
+  isPreview: boolean;
+}) {
+  return {
+    id: l.id,
+    title: l.title,
+    slug: l.slug,
+    description: l.description,
+    durationSeconds: l.durationSeconds,
+    orderIndex: l.orderIndex,
+    isPreview: l.isPreview,
+  };
+}
+
 export default async function LearnLessonPage({ params }: LearnPageProps) {
   const { courseSlug, lessonSlug } = await params;
 
@@ -34,59 +56,58 @@ export default async function LearnLessonPage({ params }: LearnPageProps) {
     notFound();
   }
 
-  const courseLessons = await listLessonsByCourse(course.id);
-  const currentLesson = courseLessons.find((l) => l.slug === lessonSlug);
+  const isCreator = course.creatorId === userId;
 
-  if (!currentLesson) {
+  // Parallelise independent DB calls: lesson list, access check, progress
+  const [courseLessons, isEnrolledRaw, progress] = await Promise.all([
+    listLessonsByCourse(course.id),
+    isCreator ? Promise.resolve(true) : hasAccess(userId, course.id),
+    getCourseProgress(userId, course.id),
+  ]);
+
+  const isEnrolled = isCreator || isEnrolledRaw;
+
+  const sanitizedAllLessons = courseLessons.map(sanitizeLesson);
+  const sanitizedCurrentLesson = sanitizedAllLessons.find(
+    (l) => l.slug === lessonSlug
+  );
+
+  if (!sanitizedCurrentLesson) {
     notFound();
   }
 
-  // Determine access status (Invariant #1: hasAccess reads only from entitlements)
-  const isCreator = course.creatorId === userId;
-  const isEnrolled = isCreator || (await hasAccess(userId, course.id));
-  const isUnlocked = isEnrolled || currentLesson.isPreview;
-
-  // Fetch course progress summary
-  const progress = await getCourseProgress(userId, course.id);
+  const isUnlocked = isEnrolled || sanitizedCurrentLesson.isPreview;
 
   // Sequential navigation
-  const currentIndex = courseLessons.findIndex((l) => l.id === currentLesson.id);
+  const currentIndex = sanitizedAllLessons.findIndex(
+    (l) => l.id === sanitizedCurrentLesson.id
+  );
   const previousLesson =
     currentIndex > 0
       ? {
-          title: courseLessons[currentIndex - 1].title,
-          slug: courseLessons[currentIndex - 1].slug,
+          title: sanitizedAllLessons[currentIndex - 1].title,
+          slug: sanitizedAllLessons[currentIndex - 1].slug,
         }
       : null;
   const nextLesson =
-    currentIndex < courseLessons.length - 1
+    currentIndex < sanitizedAllLessons.length - 1
       ? {
-          title: courseLessons[currentIndex + 1].title,
-          slug: courseLessons[currentIndex + 1].slug,
+          title: sanitizedAllLessons[currentIndex + 1].title,
+          slug: sanitizedAllLessons[currentIndex + 1].slug,
         }
       : null;
 
-  // Strict client data boundary:
-  // videoKey and raw storage paths are NEVER passed down to client props.
-  const sanitizedAllLessons = courseLessons.map((l) => ({
-    id: l.id,
-    title: l.title,
-    slug: l.slug,
-    description: l.description,
-    durationSeconds: l.durationSeconds,
-    orderIndex: l.orderIndex,
-    isPreview: l.isPreview,
-  }));
-
-  const sanitizedCurrentLesson = {
-    id: currentLesson.id,
-    title: currentLesson.title,
-    slug: currentLesson.slug,
-    description: currentLesson.description,
-    durationSeconds: currentLesson.durationSeconds,
-    orderIndex: currentLesson.orderIndex,
-    isPreview: currentLesson.isPreview,
-  };
+  // Derive curriculum duration label server-side so the client never has to
+  const totalCurriculumSeconds = courseLessons.reduce(
+    (acc, l) => acc + (l.durationSeconds ?? 0),
+    0
+  );
+  const totalCurriculumHours = Math.floor(totalCurriculumSeconds / 3600);
+  const totalCurriculumMins = Math.floor((totalCurriculumSeconds % 3600) / 60);
+  const curriculumDurationLabel =
+    totalCurriculumHours > 0
+      ? `${totalCurriculumHours}h ${totalCurriculumMins}m`
+      : `${totalCurriculumMins}m`;
 
   return (
     <PlayerView
@@ -103,6 +124,7 @@ export default async function LearnLessonPage({ params }: LearnPageProps) {
       initialProgress={progress}
       previousLesson={previousLesson}
       nextLesson={nextLesson}
+      curriculumDurationLabel={curriculumDurationLabel}
     />
   );
 }
