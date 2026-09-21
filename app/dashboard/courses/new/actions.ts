@@ -1,9 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getServerSession } from "@/lib/auth";
 import { createCourse } from "@/features/courses";
 import { parsePriceDollarsToCents } from "@/lib/format-price";
+import { ActionError, logActionError } from "@/lib/action-errors";
+import { formatZodError } from "@/lib/safe-action";
 
 export interface CreateCourseActionState {
   error?: string | null;
@@ -43,8 +46,14 @@ export async function createCourseAction(
     });
     createdCourseId = course.id;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to create course";
-    return { error: message };
+    if (err instanceof z.ZodError) {
+      return { error: formatZodError(err) };
+    }
+    if (err instanceof ActionError) {
+      return { error: err.message };
+    }
+    logActionError("createCourseAction", err, { userId: session.user.id });
+    return { error: "An unexpected error occurred. Please try again." };
   }
 
   redirect(`/dashboard/courses/${createdCourseId}`);

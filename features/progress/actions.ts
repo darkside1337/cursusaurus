@@ -1,17 +1,15 @@
 "use server";
 
+import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { getServerSession } from "@/lib/auth";
 import { db } from "@/lib/db/db";
 import { lessons } from "@/lib/db/schema";
 import { updateLessonProgress, setLessonCompletion } from "./mutations";
+import { recordPlaybackSchema } from "./schemas";
 import type { LessonProgress } from "./types";
+import { safeAction, type ActionResult } from "@/lib/safe-action";
 
-export interface ProgressActionResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type ProgressActionResult<T = unknown> = ActionResult<T>;
 
 export async function recordLessonPlaybackAction(input: {
   courseId: string;
@@ -19,70 +17,62 @@ export async function recordLessonPlaybackAction(input: {
   positionSeconds: number;
   ended?: boolean;
 }): Promise<ProgressActionResult<LessonProgress>> {
-  try {
-    const session = await getServerSession();
-    if (!session?.user?.id) {
-      return { success: false, error: "Unauthorized" };
-    }
+  return safeAction({
+    actionName: "recordLessonPlaybackAction",
+    schema: recordPlaybackSchema,
+    input,
+    handler: async (validated, user) => {
+      let position = validated.positionSeconds;
 
-    let position = input.positionSeconds;
-
-    if (input.ended) {
-      const [lesson] = await db
-        .select({ durationSeconds: lessons.durationSeconds })
-        .from(lessons)
-        .where(
-          and(
-            eq(lessons.id, input.lessonId),
-            eq(lessons.courseId, input.courseId)
+      if (validated.ended) {
+        const [lesson] = await db
+          .select({ durationSeconds: lessons.durationSeconds })
+          .from(lessons)
+          .where(
+            and(
+              eq(lessons.id, validated.lessonId),
+              eq(lessons.courseId, validated.courseId)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (lesson?.durationSeconds && lesson.durationSeconds > 0) {
-        position = lesson.durationSeconds;
+        if (lesson?.durationSeconds && lesson.durationSeconds > 0) {
+          position = lesson.durationSeconds;
+        }
       }
-    }
 
-    const progress = await updateLessonProgress({
-      userId: session.user.id,
-      courseId: input.courseId,
-      lessonId: input.lessonId,
-      lastPositionSeconds: position,
-    });
-
-    return { success: true, data: progress };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Failed to record playback",
-    };
-  }
+      return await updateLessonProgress({
+        userId: user.id,
+        courseId: validated.courseId,
+        lessonId: validated.lessonId,
+        lastPositionSeconds: position,
+      });
+    },
+  });
 }
+
+const toggleLessonCompletionInputSchema = z.object({
+  courseId: z.string().trim().min(1, "Course ID is required"),
+  lessonId: z.string().trim().min(1, "Lesson ID is required"),
+  completed: z.boolean(),
+});
 
 export async function toggleLessonCompletionAction(input: {
   courseId: string;
   lessonId: string;
   completed: boolean;
 }): Promise<ProgressActionResult<LessonProgress>> {
-  try {
-    const session = await getServerSession();
-    if (!session?.user?.id) {
-      return { success: false, error: "Unauthorized" };
-    }
-
-    const progress = await setLessonCompletion({
-      userId: session.user.id,
-      courseId: input.courseId,
-      lessonId: input.lessonId,
-      completed: input.completed,
-    });
-
-    return { success: true, data: progress };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Failed to toggle completion",
-    };
-  }
+  return safeAction({
+    actionName: "toggleLessonCompletionAction",
+    schema: toggleLessonCompletionInputSchema,
+    input,
+    handler: async (validated, user) => {
+      return await setLessonCompletion({
+        userId: user.id,
+        courseId: validated.courseId,
+        lessonId: validated.lessonId,
+        completed: validated.completed,
+      });
+    },
+  });
 }

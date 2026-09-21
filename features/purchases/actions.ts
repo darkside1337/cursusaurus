@@ -6,6 +6,7 @@ import { getServerSession } from "@/lib/auth";
 import { env } from "@/config/env";
 import { getCourseById, getCourseReadiness } from "@/features/courses/queries";
 import { purchases, entitlements, subscriptions } from "@/lib/db/schema";
+import { logActionError } from "@/lib/action-errors";
 import { createPurchaseCheckoutSession } from "./checkout";
 
 export interface CreateCourseCheckoutResult {
@@ -16,6 +17,12 @@ export interface CreateCourseCheckoutResult {
 
 /**
  * Server action to initiate a one-time purchase checkout session for a course.
+ *
+ * NOTE on Rate Limiting (M3):
+ * Request-level checkout rate limiting is intentionally deferred from this phase until there
+ * is a demonstrated operational requirement. The business invariants below (e.g. single
+ * completed purchase per course guard Invariant #12) prevent duplicate or invalid purchases
+ * in the domain, but are not a substitute for request-level rate limiting.
  */
 export async function createCourseCheckoutSessionAction(
   courseId: string
@@ -99,7 +106,10 @@ export async function createCourseCheckoutSessionAction(
 
     return { url: checkoutSession.url };
   } catch (err) {
-    console.error("Error creating course checkout session:", err);
-    return { error: err instanceof Error ? err.message : "Failed to create checkout session" };
+    logActionError("createCourseCheckoutSessionAction", err, {
+      userId: user.id,
+      courseId: course.id,
+    });
+    return { error: "Failed to create checkout session. Please try again." };
   }
 }

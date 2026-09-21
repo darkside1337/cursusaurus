@@ -6,6 +6,7 @@ import { getServerSession } from "@/lib/auth";
 import { env } from "@/config/env";
 import { subscriptions } from "@/lib/db/schema";
 import { getSafeCallbackUrl } from "@/lib/callback-url";
+import { logActionError } from "@/lib/action-errors";
 import { createSubscriptionCheckoutSession } from "./checkout";
 import { createCustomerPortalSession } from "./portal";
 
@@ -18,6 +19,12 @@ export interface SubscriptionActionResult {
 
 /**
  * Server action to initiate an All-Access subscription checkout with a 7-day trial.
+ *
+ * NOTE on Rate Limiting (M3):
+ * Request-level checkout rate limiting is intentionally deferred from this phase until there
+ * is a demonstrated operational requirement. The business invariants below (e.g. single active
+ * subscription guard Invariant #11, trial reuse check P3-1) prevent duplicate or invalid enrollment
+ * states in the domain, but are not a substitute for request-level rate limiting.
  */
 export async function createSubscriptionCheckoutSessionAction(
   callbackUrl = "/billing"
@@ -77,8 +84,10 @@ export async function createSubscriptionCheckoutSessionAction(
 
     return { url: checkoutSession.url };
   } catch (err) {
-    console.error("Error creating subscription checkout session:", err);
-    return { error: err instanceof Error ? err.message : "Failed to initiate subscription" };
+    logActionError("createSubscriptionCheckoutSessionAction", err, {
+      userId: user.id,
+    });
+    return { error: "Failed to initiate subscription. Please try again." };
   }
 }
 
@@ -139,7 +148,10 @@ export async function manageSubscriptionAction(): Promise<SubscriptionActionResu
 
     return { url: portalSession.url };
   } catch (err) {
-    console.error("Error creating customer portal session:", err);
-    return { error: err instanceof Error ? err.message : "Failed to open customer portal" };
+    logActionError("manageSubscriptionAction", err, {
+      userId: user.id,
+      customerId: stripeCustomerId,
+    });
+    return { error: "Failed to open customer portal. Please try again." };
   }
 }
