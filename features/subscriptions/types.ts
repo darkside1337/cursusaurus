@@ -14,6 +14,11 @@ export type SubscriptionStatus =
   | "incomplete_expired"
   | "paused";
 
+export const ACTIVE_SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = [
+  "active",
+  "trialing",
+] as const;
+
 export interface CreateSubscriptionCheckoutInput {
   userId: string;
   customerEmail?: string;

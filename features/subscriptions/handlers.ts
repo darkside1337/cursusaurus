@@ -2,15 +2,18 @@ import type Stripe from "stripe";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/db";
 import { stripe } from "@/lib/stripe";
-import { subscriptions, entitlements, processedStripeEvents } from "@/lib/db/schema";
+import { subscriptions, entitlements } from "@/lib/db/schema";
+import { revokeSubscriptionEntitlements } from "@/features/entitlements/writers";
+import { isEventAlreadyProcessed, recordProcessedEvent } from "@/features/stripe/idempotency";
 import type { FulfillmentContext } from "@/features/stripe/types";
+import type { SubscriptionStatus } from "./types";
 
 interface SubscriptionUpsertData {
   userId: string;
   stripeSubscriptionId: string;
   stripeCustomerId: string;
   stripeSessionId?: string | null;
-  status: string;
+  status: SubscriptionStatus | Stripe.Subscription.Status;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
   trialEndsAt: Date | null;
@@ -93,18 +96,8 @@ export async function upsertSubscription(
         .onConflictDoNothing();
     }
   } else {
-    // Revoke subscription all-access entitlement
-    await tx
-      .update(entitlements)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(entitlements.userId, targetUserId),
-          isNull(entitlements.courseId),
-          eq(entitlements.source, "subscription"),
-          isNull(entitlements.revokedAt)
-        )
-      );
+    // Revoke subscription all-access entitlement (Invariant #4)
+    await revokeSubscriptionEntitlements(targetUserId, tx);
   }
 }
 
@@ -152,13 +145,7 @@ export async function handleSubscriptionCreated(
 
   return await db.transaction(async (tx) => {
     // 1. Idempotency check
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false;
     }
 
@@ -171,25 +158,11 @@ export async function handleSubscriptionCreated(
 
     if (existingSub) {
       // Row already created by checkout.session.completed or newer event
-      await tx
-        .insert(processedStripeEvents)
-        .values({
-          id: crypto.randomUUID(),
-          eventId: ctx.eventId,
-          eventType: ctx.eventType,
-        })
-        .onConflictDoNothing();
+      await recordProcessedEvent(tx, ctx);
       return false;
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     await upsertSubscription(tx, {
       userId,
@@ -220,13 +193,7 @@ export async function handleSubscriptionUpdated(
 
   return await db.transaction(async (tx) => {
     // 1. Idempotency check
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false;
     }
 
@@ -246,22 +213,13 @@ export async function handleSubscriptionUpdated(
       // customer.subscription.created and customer.subscription.updated events often share
       // the exact same second. We strictly use '<' for active lifecycles so same-second
       // progressions succeed.
-      // NOTE: Same-second non-cancel updates that arrive out of order (e.g. plan change vs metadata)
-      // cannot be distinguished by Stripe's timestamp resolution alone.
       if (ctx.eventEpoch < existingSub.lastEventEpoch) {
         // Out-of-order stale event -> ignore
         return false;
       }
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     const targetUserId = existingSub?.userId || userId;
     if (!targetUserId) {
@@ -299,13 +257,7 @@ export async function handleSubscriptionDeleted(
 
   return await db.transaction(async (tx) => {
     // 1. Idempotency check
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false;
     }
 
@@ -324,14 +276,7 @@ export async function handleSubscriptionDeleted(
       }
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     if (!existingSub) {
       // Missing row tombstone (D9)
@@ -361,17 +306,7 @@ export async function handleSubscriptionDeleted(
       .where(eq(subscriptions.id, existingSub.id));
 
     // Revoke all-access entitlement only (Invariant #4)
-    await tx
-      .update(entitlements)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(entitlements.userId, existingSub.userId),
-          isNull(entitlements.courseId),
-          eq(entitlements.source, "subscription"),
-          isNull(entitlements.revokedAt)
-        )
-      );
+    await revokeSubscriptionEntitlements(existingSub.userId, tx);
 
     return true;
   });
@@ -420,24 +355,11 @@ export async function handleSubscriptionCheckoutCompleted(
     extractSubscriptionTimestamps(subscription);
 
   return await db.transaction(async (tx) => {
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false;
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     await upsertSubscription(tx, {
       userId,
@@ -497,13 +419,7 @@ export async function handleInvoiceEvent(
 
   return await db.transaction(async (tx) => {
     // 1. Idempotency check
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false;
     }
 
@@ -523,14 +439,7 @@ export async function handleInvoiceEvent(
       }
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     const targetUserId = existingSub?.userId || subscription.metadata?.userId;
     if (!targetUserId) {
@@ -552,4 +461,3 @@ export async function handleInvoiceEvent(
     return true;
   });
 }
-

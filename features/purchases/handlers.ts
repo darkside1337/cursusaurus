@@ -1,7 +1,9 @@
 import type Stripe from "stripe";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db/db";
-import { purchases, entitlements, processedStripeEvents, refundTombstones } from "@/lib/db/schema";
+import { purchases, entitlements, refundTombstones } from "@/lib/db/schema";
+import { revokePurchaseEntitlement } from "@/features/entitlements/writers";
+import { isEventAlreadyProcessed, recordProcessedEvent } from "@/features/stripe/idempotency";
 import type { FulfillmentContext } from "@/features/stripe/types";
 
 /**
@@ -31,13 +33,7 @@ export async function handlePurchaseCheckoutCompleted(
 
   return await db.transaction(async (tx) => {
     // 1. Check idempotency
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false; // Already handled
     }
 
@@ -50,14 +46,7 @@ export async function handlePurchaseCheckoutCompleted(
 
     if (tombstone) {
       // Payment was already refunded before checkout session completed
-      await tx
-        .insert(processedStripeEvents)
-        .values({
-          id: crypto.randomUUID(),
-          eventId: ctx.eventId,
-          eventType: ctx.eventType,
-        })
-        .onConflictDoNothing();
+      await recordProcessedEvent(tx, ctx);
       return false;
     }
 
@@ -76,25 +65,11 @@ export async function handlePurchaseCheckoutCompleted(
 
     if (existingCompletedPurchase) {
       // Acknowledge no-op; record event idempotency
-      await tx
-        .insert(processedStripeEvents)
-        .values({
-          id: crypto.randomUUID(),
-          eventId: ctx.eventId,
-          eventType: ctx.eventType,
-        })
-        .onConflictDoNothing();
+      await recordProcessedEvent(tx, ctx);
       return false;
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     // 4. Insert purchase record with historical price paid (on conflict do nothing for concurrent arrivals)
     const purchaseId = crypto.randomUUID();
@@ -158,24 +133,11 @@ export async function handlePurchaseRefund(
   }
 
   return await db.transaction(async (tx) => {
-    const [alreadyProcessed] = await tx
-      .select({ id: processedStripeEvents.id })
-      .from(processedStripeEvents)
-      .where(eq(processedStripeEvents.eventId, ctx.eventId))
-      .limit(1);
-
-    if (alreadyProcessed) {
+    if (await isEventAlreadyProcessed(tx, ctx.eventId)) {
       return false;
     }
 
-    await tx
-      .insert(processedStripeEvents)
-      .values({
-        id: crypto.randomUUID(),
-        eventId: ctx.eventId,
-        eventType: ctx.eventType,
-      })
-      .onConflictDoNothing();
+    await recordProcessedEvent(tx, ctx);
 
     const [purchase] = await tx
       .select()
@@ -198,17 +160,7 @@ export async function handlePurchaseRefund(
       .where(eq(purchases.id, purchase.id));
 
     // Revoke course-scoped purchase entitlement (Invariant #6)
-    await tx
-      .update(entitlements)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(entitlements.userId, purchase.userId),
-          eq(entitlements.courseId, purchase.courseId),
-          eq(entitlements.source, "purchase"),
-          isNull(entitlements.revokedAt)
-        )
-      );
+    await revokePurchaseEntitlement(purchase.userId, purchase.courseId, tx);
 
     return true;
   });

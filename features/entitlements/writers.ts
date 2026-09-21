@@ -4,6 +4,9 @@ import { entitlements } from "@/lib/db/schema";
 import { grantEntitlementSchema, revokeEntitlementSchema } from "./schemas";
 import type { GrantEntitlementInput, RevokeEntitlementInput, Entitlement } from "./types";
 
+/** Accepts either the top-level db client or a transaction client. */
+type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
  * Grants an entitlement to a user.
  * null courseId = all-access (subscription-sourced or global grant).
@@ -79,9 +82,14 @@ export async function revokeEntitlement(input: RevokeEntitlementInput): Promise<
 /**
  * Revokes all-access subscription entitlements only.
  * Invariant #4: Purchase-sourced entitlements for any course are never touched.
+ *
+ * Accepts an optional transaction client so it can be called inside a db.transaction().
  */
-export async function revokeSubscriptionEntitlements(userId: string): Promise<Entitlement[]> {
-  return await db
+export async function revokeSubscriptionEntitlements(
+  userId: string,
+  client: DbOrTx = db
+): Promise<Entitlement[]> {
+  return await client
     .update(entitlements)
     .set({ revokedAt: new Date() })
     .where(
@@ -98,12 +106,15 @@ export async function revokeSubscriptionEntitlements(userId: string): Promise<En
 /**
  * Revokes purchase-sourced entitlement for a specific course only.
  * Invariant #6: Progress rows are never touched on refund.
+ *
+ * Accepts an optional transaction client so it can be called inside a db.transaction().
  */
 export async function revokePurchaseEntitlement(
   userId: string,
-  courseId: string
+  courseId: string,
+  client: DbOrTx = db
 ): Promise<Entitlement[]> {
-  return await db
+  return await client
     .update(entitlements)
     .set({ revokedAt: new Date() })
     .where(
