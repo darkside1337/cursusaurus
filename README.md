@@ -1,328 +1,311 @@
-# C U R S U S A U R U S
+# Cursusaurus
 
-<p align="center">
-  <strong>Dual-Model Course Platform — Buy Once or Subscribe to All-Access</strong><br>
-  <em>Serif editorial on warm paper. One entitlement table answers "do I have access?" — never payment history.</em>
-</p>
+A course platform where learners either buy individual courses or subscribe to an All-Access Pass, and creators build and publish courses. Portfolio project built with Next.js, Postgres (Drizzle), Better Auth, Stripe and Supabase Storage.
 
-<p align="center">
-  <a href="#4-architectural--security-invariants"><img src="https://img.shields.io/badge/Next.js-16.3%20(App%20Router)-black?style=flat-square&logo=next.js" alt="Next.js 16" /></a>
-  <a href="#4-architectural--security-invariants"><img src="https://img.shields.io/badge/React-19.2-black?style=flat-square&logo=react" alt="React 19" /></a>
-  <a href="#5-tech-stack"><img src="https://img.shields.io/badge/Neon-Serverless%20Postgres-00E599?style=flat-square&logo=postgresql&logoColor=black" alt="Neon Postgres" /></a>
-  <a href="#5-tech-stack"><img src="https://img.shields.io/badge/Drizzle-ORM%200.45-C5F74F?style=flat-square&logo=drizzle" alt="Drizzle ORM" /></a>
-  <a href="#5-tech-stack"><img src="https://img.shields.io/badge/Better%20Auth-1.7-black?style=flat-square" alt="Better Auth" /></a>
-  <a href="#5-tech-stack"><img src="https://img.shields.io/badge/Stripe-Checkout%20%26%20Webhooks-635BFF?style=flat-square&logo=stripe&logoColor=white" alt="Stripe" /></a>
-  <a href="#5-tech-stack"><img src="https://img.shields.io/badge/Supabase-Signed%20Video%20URLs-3ECF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase Storage" /></a>
-  <a href="#6-test-suite--quality-assurance"><img src="https://img.shields.io/badge/Playwright-29%20E2E%20Passing-45ba4b?style=flat-square&logo=playwright&logoColor=white" alt="Playwright E2E" /></a>
-  <a href="#6-test-suite--quality-assurance"><img src="https://img.shields.io/badge/Vitest-221%20Tests%20Passing-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest Tests" /></a>
-</p>
+![Cursusaurus catalog](public/demo/screenshots/01-catalog-marketplace.png)
+
+**What it does**
+
+- **Two ways to pay:** a one-time purchase per course (lifetime access), or an All-Access Pass ($15/mo, 7-day free trial) that also covers courses published after subscribing.
+- **One source of truth for access:** a single `entitlements` table decides who can watch what. Payment history is never consulted.
+- **Webhook handling designed for retries:** each Stripe webhook writes payment state and entitlements in one Postgres transaction, and duplicate deliveries are ignored.
+- **Gated video:** lessons play through short-lived (60-second) signed URLs from a private Supabase Storage bucket, issued only after an access check.
+- **Tested:** Vitest feature tests on an in-memory Postgres (PGlite) and Playwright end-to-end tests. See [Testing](#testing).
+
+**Try it:** no hosted demo is available. The quickest way to try it is to [run it locally](#run-it-locally) with seeded data.
 
 ---
 
-<p align="center">
-  <img src="public/demo/screenshots/01-catalog-marketplace.png" alt="Cursusaurus Editorial Catalog Hero" width="100%" />
-</p>
-
----
-
-## 1. Overview & Editorial Philosophy
-
-**Cursusaurus** is a course platform where learners either buy individual courses outright (one-time Stripe payment, lifetime access) or subscribe to an **All-Access Pass** (recurring, $15/mo with a 7-day free trial) that unlocks every course — including ones published after subscribing.
-
-Rather than resembling a generic e-commerce checkout, the experience is conceived as an academic prospectus. Every surface echoes the editorial system in `docs/DESIGN.md`:
-
-- **Strict Editorial Restraint**: Weightless surfaces, hairline borders (`1px #ececec`), barely-there shadows. No gradients, no marketing noise — course content leads.
-- **Book Typography**: Display headlines in Signifier serif (weight 400 only, 44/64/90px); body and UI in Sohne sans (400–700). Whole-dollar prices omit decimals (`$49`, `$15/mo`) via `lib/format-price.ts`.
-- **Access-State Color Discipline**: Blush Peach (`#fbe1d1` + Sienna `#5d2a1a` text) signals access *only* — All-Access badges, locked-content wash, the featured pricing tier. Progress and completion are Ink Black (`#17191c`), never peach, so the two meanings never collide.
-
----
-
-## 2. Feature Flows & Media
-
-### Flow 1 — Catalog Discovery & Dual-Pricing Course Detail
-> Searchable editorial catalog, category filter pills, and the course prospectus with both pricing paths rendered side by side — "Buy outright" vs. "All-Access Pass" — with overlap states for owned/subscribed learners.
-
-<table width="100%">
-  <tr>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/01b-catalog-grid.png" alt="Catalog Course Grid" width="100%" />
-      <p align="center"><sub><strong>Catalog Grid:</strong> Published masterclasses across Code, Design, and Business with category badges, prices, and All-Access pills.</sub></p>
-    </td>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/02-course-detail-pricing.png" alt="Course Detail Dual Pricing" width="100%" />
-      <p align="center"><sub><strong>Course Prospectus:</strong> Introduction to TypeScript ($49 one-time) beside the peach All-Access Pass card ($15/mo after 7-day trial).</sub></p>
-    </td>
-  </tr>
-</table>
-
----
-
-### Flow 2 — Classroom Playback & Locked-Content Signaling
-> Distraction-free lesson player gated by `hasAccess()`, 60-second signed Supabase URLs, sticky progress at 90% playback — and locked lessons that signal *available paths* in peach rather than dead-end disabled gray.
-
-<table width="100%">
-  <tr>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/03-classroom-player.png" alt="Video Classroom Player" width="100%" />
-      <p align="center"><sub><strong>Classroom:</strong> Elevated 20px-radius player shell, ink-black progress bar (50% 2/4), curriculum syllabus with completion checkmarks.</sub></p>
-    </td>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/04-classroom-locked-preview.png" alt="Locked Content Overlay" width="100%" />
-      <p align="center"><sub><strong>Locked Preview:</strong> Blush Peach overlay wash with "Included in All-Access" signaling — free previews still playable.</sub></p>
-    </td>
-  </tr>
-</table>
-
----
-
-### Flow 3 — Learner Library & Billing Portal
-> Personal workspace with zero pricing chrome — progress bars and `<AccessBadge>` states derived from live entitlements — plus self-service subscription management through the Stripe Customer Portal with a perpetual-ownership ledger.
-
-<table width="100%">
-  <tr>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/05-learner-library.png" alt="Learner Library" width="100%" />
-      <p align="center"><sub><strong>Library:</strong> Owned/subscribed courses with progress, All-Access / Purchased / Locked badges — historical purchases distinguished from revoked access.</sub></p>
-    </td>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/08-billing-portal.png" alt="Billing Portal" width="100%" />
-      <p align="center"><sub><strong>Billing:</strong> Subscription lifecycle card (active / trialing / past-due), Customer Portal CTA, and perpetual purchase records.</sub></p>
-    </td>
-  </tr>
-</table>
-
----
-
-### Flow 4 — Creator Studio & Mobile-First Reading
-> Curriculum studio for sequencing lessons, preview toggles, and video asset uploads; management hub with publication badges — all collapsing mobile-first (1 → 2 → 3 columns) with stacked pricing cards on handsets.
-
-<table width="100%">
-  <tr>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/06b-creator-curriculum.png" alt="Creator Curriculum Builder" width="100%" />
-      <p align="center"><sub><strong>Curriculum Studio:</strong> Sequenced lessons, free-preview toggles, and Supabase video upload status per lesson.</sub></p>
-    </td>
-    <td width="50%" valign="top">
-      <img src="public/demo/screenshots/07-creator-dashboard.png" alt="Creator Dashboard" width="100%" />
-      <p align="center"><sub><strong>Management Hub:</strong> Course ledger with publication badges, lesson metrics, and studio navigation.</sub></p>
-    </td>
-  </tr>
-</table>
-
-<p align="center">
-  <img src="public/demo/screenshots/11-login-screen.png" alt="Login Screen" width="100%" />
-</p>
-<p align="center"><sub><strong>Sign In:</strong> Editorial auth card with Google + GitHub OAuth on warm paper, open-redirect-safe callback URLs.</sub></p>
-
-<p align="center">
-  <img src="public/demo/screenshots/09-mobile-catalog.png" alt="Mobile Catalog" width="45%" />
-  &nbsp;&nbsp;
-  <img src="public/demo/screenshots/10-mobile-course-detail.png" alt="Mobile Course Detail" width="45%" />
-</p>
-<p align="center"><sub><strong>Mobile:</strong> Single-column catalog and course detail with horizontally scrolling filter pills and stacked (non-sticky) pricing cards.</sub></p>
-
----
-
-## 3. The Golden Architectural Rule
-
-> **Routes compose features; features contain business logic.**
-
-```
-cursusaurus/
-├── app/                    # Routing shell (thin layouts & page composition only)
-│   ├── (marketplace)/      # Public catalog + course detail ([slug], enrollment-panel)
-│   ├── (auth)/login/       # Google + GitHub OAuth sign-in
-│   ├── dashboard/courses/  # Creator studio (new, [id], actions.ts, curriculum-studio)
-│   ├── learn/[courseSlug]/[lessonSlug]/ # Classroom playback (player-view)
-│   ├── library/            # Learner workspace (no pricing chrome)
-│   ├── billing/            # Subscription status + Customer Portal link
-│   ├── checkout/success/   # Order polling page (order-status-view)
-│   └── api/                # Route Handlers only: auth, webhooks/stripe,
-│                           # order-status/[sessionId], video/signed-url
-├── features/               # Isolated domain boundaries (queries, actions, validation)
-│   ├── courses/            # CRUD, slugs, publish state, readiness
-│   ├── purchases/          # One-time checkout, refund tombstones, queries
-│   ├── subscriptions/      # Subscription checkout, pricing, portal, queries
-│   ├── entitlements/       # hasAccess(), grant/revoke writers
-│   ├── stripe/             # Dispatcher, fulfillment context, poison dead-letter
-│   ├── video/              # Signed URLs, Supabase uploads, asset management
-│   └── progress/           # Lesson progress upserts, completion logic
-├── components/             # Presentation (course-card, classroom/, progress-bar,
-│   └── ui/                 # shadcn/ui primitives — domain-agnostic, token-styled)
-├── lib/                    # Infrastructure (db/, stripe.ts, auth.ts, storage.ts)
-├── config/env.ts           # T3 env validation (server + client vars)
-└── proxy.ts                # Optimistic cookie-presence auth gate (not the boundary)
-```
-
-1. **`app/` stays thin**: Renders layouts and composes feature calls. Zero direct database queries, Stripe API calls, or price math in route files.
-2. **`features/` encapsulates domain models**: Queries, Server Actions, Zod schemas, and fulfillment writers live inside their bounded context.
-3. **`components/ui/` is presentation-only**: Reusable primitives receive all data via props and never import from `features/` or `app/`.
-4. **`app/api/` + Server Actions split**: Forms, checkout creation, and portal sessions are Server Actions; webhooks, polling, and signed URLs are Route Handlers. `proxy.ts` is an eager optimistic gate — authoritative session checks run downstream in layouts, actions, and handlers.
-
----
-
-## 4. Architectural & Security Invariants
-
-### 1. Entitlements Are the Sole Access Authority
-`hasAccess(userId, courseId)` reads **only** from `entitlements` — never from `purchases` or `subscriptions`. `course_id = null` means all-access (subscription-sourced); a concrete `course_id` means course-scoped (purchase-sourced).
-
-### 2. Transactional Webhook Fulfillment
-Each Stripe webhook writes payment state **and** entitlements in a single Postgres transaction, guarded by a unique constraint on `processed_stripe_events.event_id` — duplicate deliveries become no-ops. Central dispatcher dead-letters malformed events to stop retry storms.
-
-### 3. Subscription Lifecycle Without Ambiguity
-`trialing` and `active` grant the all-access entitlement; `past_due`, `canceled`, and `unpaid` revoke it immediately (no grace period). Canceling or lapsing a subscription revokes **only** subscription-sourced rows — a standalone purchase for the same course is never touched. Out-of-order deliveries are rejected via whole-second epoch comparison (`last_event_epoch`); completed purchases are immutable.
-
-### 4. Refunds Revoke Access, Preserve Learning
-A refund writes a `refund_tombstone` (keyed by `stripe_payment_intent_id`) for idempotency, revokes the purchase-sourced entitlement, and **never** deletes `lesson_progress` — re-purchase resumes where the learner left off.
-
-### 5. Reconciliation Seam for Missed Webhooks
-`/checkout/success` polls `GET /api/order-status/[sessionId]` (strict owner-verified, 404 on mismatch). If the webhook is delayed or missed, a single-shot reconciliation claimed atomically via `reconcile_attempts` recovers the session without double-granting.
-
-### 6. Gated Video Delivery
-Signed playback URLs are minted server-side **only after** `hasAccess()` passes — 60-second Supabase Storage GETs from a private bucket, 50 MB per-lesson cap enforced client-side, server-side, and at the bucket. Free-preview lessons bypass auth independently of paid access.
-
----
-
-## 5. Tech Stack
-
-| Layer | Technology | Rationale |
-| :--- | :--- | :--- |
-| **Framework** | Next.js 16 (App Router) | React Server Components, Server Actions, proxy auth gate |
-| **Frontend Runtime** | React 19 | Server/client composition, native transitions, action state hooks |
-| **Database** | Neon Postgres | Managed serverless Postgres for all domain state |
-| **ORM** | Drizzle ORM | Type-safe SQL, single-schema source of truth, generated migrations |
-| **Authentication** | Better Auth | Signed session cookies, Google + GitHub OAuth, test cookie minting |
-| **Payments** | Stripe | Hosted Checkout (one-time + subscription w/ 7-day trial), Customer Portal, signature-verified webhooks |
-| **Storage** | Supabase Storage | Private `course-videos` bucket, short-lived signed playback URLs |
-| **Styling** | Tailwind CSS v4 | `@theme inline` editorial tokens + required `:root` shadcn mapping |
-| **Component Primitives** | shadcn/ui & Base UI | Accessible primitives restyled to Signifier/Sohne, peach/ink tokens |
-| **Testing** | Vitest (PGlite) & Playwright | In-memory DB feature tests + real-DB browser E2E |
-
----
-
-## 6. Test Suite & Quality Assurance
-
-Isolated tests run against an in-memory PGlite database (real Drizzle migrations, `cleanDb()` helper) — no external Postgres needed. E2E runs against the live app with a real database.
-
-```bash
-# Unit + feature tests (221 passing across 32 files)
-pnpm test
-
-# End-to-end browser flows (29 passing across 9 suites)
-pnpm test:e2e
-
-# Type-check, lint, UI audit (zero raw button/input leaks)
-pnpm exec tsc --noEmit
-pnpm lint
-pnpm audit:ui
-```
-
-- **Entitlement matrix**: purchase-only, subscription-only, `trialing`, both simultaneously, canceled-with-both, `past_due`, refunded — plus duplicate-grant and safe-revocation isolation.
-- **Payments**: checkout validation, price integrity, trial-abuse prevention, refund tombstones, epoch-guarded subscription transitions, Customer Portal scoping, delayed/duplicate/out-of-order webhook delivery, single-shot reconciliation under concurrency.
-- **Content**: signed-URL issuance gated by `hasAccess()`, 60s expiry, preview bypass, unpublished-course restriction, 50 MB upload enforcement, sticky 90%-playback auto-completion, manual toggle idempotency.
-- **E2E critical paths**: auth + creator authorization, course create/edit/publish, catalog search, readiness eligibility, one-time + trial + cancel + failed-renewal lifecycles, video upload/playback, progress + library consistency.
-
----
-
-## 7. Getting Started
+## Run it locally
 
 ### Prerequisites
-- Node.js 20+
-- pnpm 12.3.4 (`corepack enable && corepack prepare pnpm@latest --activate`)
-- Neon Postgres account (or local PostgreSQL)
-- Stripe developer account & Stripe CLI
-- Supabase project (Storage)
 
-### 1. Clone & Install
-```bash
+- Node.js 20 or newer (`@types/node` is v20+; Next.js 16 requires Node 20.9+)
+- pnpm 12.3.4 (see the `packageManager` field in `package.json`; activate with `corepack enable && corepack prepare pnpm@12.3.4 --activate`)
+- A Postgres database (the example connection string below uses Neon)
+- A Stripe account in test mode, plus the Stripe CLI
+- A Supabase project with a **private** Storage bucket named `course-videos`
+- Google and/or GitHub OAuth credentials — both are optional. The app starts with neither configured (`config/env.ts` marks them optional and `lib/auth.ts` only registers a provider when its client ID + secret are set); each sign-in button only works once its provider is configured. Register these callback URLs with each enabled provider: `http://localhost:3000/api/auth/callback/google` and `http://localhost:3000/api/auth/callback/github` (Better Auth defaults — no custom base path is set in `lib/auth.ts`).
+
+### 1. Clone and install
+
+```
 git clone https://github.com/darkside1337/cursusaurus.git
 cd cursusaurus
 pnpm install
 ```
 
-### 2. Environment Configuration
-Create a `.env` file in the root directory:
-```env
-# Database (Neon Serverless Postgres)
-DATABASE_URL="postgresql://neondb_owner:password@ep-xxx-pooler.region.neon.tech/neondb?sslmode=require"
+### 2. Configure environment variables
+
+Create a `.env` file in the project root:
+
+```
+# Database
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require"
 
 # Better Auth
 BETTER_AUTH_SECRET="your-32-byte-random-secret"
 BETTER_AUTH_URL="http://localhost:3000"
 
-# OAuth Providers
+# OAuth providers (all optional — configure what you want to offer)
 GITHUB_CLIENT_ID=""
 GITHUB_CLIENT_SECRET=""
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 
-# Stripe Payments
+# Stripe (test mode)
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+
+# Optional: use a pre-created Stripe Price for the All-Access Pass.
+# When unset, checkout builds the $15/mo + 7-day-trial price inline.
+STRIPE_ALL_ACCESS_PRICE_ID="price_..."
 
 # Supabase Storage (private course-videos bucket)
 SUPABASE_URL="https://xyz.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 ```
 
-### 3. Database Migration & Seed
-```bash
-# Push schema migrations
-pnpm drizzle-kit migrate
+Environment variables are validated at startup in `config/env.ts`.
 
-# Seed fixture users, courses, lessons, and entitlements
+The $15/mo price and 7-day trial are hardcoded in `features/subscriptions/pricing.ts` (`ALL_ACCESS_PRICE_CENTS = 1500`, `ALL_ACCESS_TRIAL_DAYS = 7`). `features/subscriptions/checkout.ts` uses `STRIPE_ALL_ACCESS_PRICE_ID` when set, otherwise it creates the subscription price inline via `price_data` — so no manual Stripe dashboard product/price setup is needed. First-time subscribers get the trial; `hasUsedTrial` customers check out without one.
+
+### 3. Migrate and seed the database
+
+```
+pnpm drizzle-kit migrate
 pnpm seed
 ```
 
-### 4. Run Development Server
-```bash
-# Terminal 1: Next.js dev server
+`pnpm seed` creates fixture users, courses, lessons and entitlements. `pnpm seed:clean` resets the data and seeds again.
+
+### 4. Start the app
+
+```
+# Terminal 1
 pnpm dev
 
-# Terminal 2: Stripe webhook event forwarding (for checkout testing)
+# Terminal 2: forward Stripe webhooks (needed for checkout flows)
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to browse the catalog.
+Log in to the Stripe CLI first. `stripe listen` prints a signing secret (`whsec_...`); use it as `STRIPE_WEBHOOK_SECRET`.
 
-To regenerate the screenshots in §2 after a redesign:
-```bash
-pnpm seed && pnpm screenshots
-```
+Open <http://localhost:3000> to browse the catalog.
+
+### 5. Sign in as a seeded user
+
+With the dev server running, `pnpm browse` opens a Chrome window already authenticated as a seed user. It defaults to Alice Learner (`seed-learner-01`) and accepts a role plus path: `pnpm browse creator` opens Bob Creator (`seed-creator-01`) in the studio.
+
+Seeded users (`scripts/seed.ts`):
+
+| Email | Role | Access fixture |
+| --- | --- | --- |
+| `learner@example.com` (Alice Learner) | Learner | Active All-Access sub **plus** a completed purchase of Intro to TypeScript; has in-progress lesson progress |
+| `daniel.vance@example.com` | Learner | Subscription canceled but still in-period (`cancelAtPeriodEnd`, access still valid) |
+| `chloe.bennett@example.com` | Learner | Expired subscription (entitlement revoked, no access) |
+| `liam.patel@example.com` | Learner | Refunded TypeScript purchase (entitlement revoked, progress kept) |
+| `sophia.ramos@example.com` | Learner | No purchases or subscriptions (unentitled baseline) |
+| `creator@example.com` (Bob Creator) | Creator | Owns Intro to TypeScript and Documentary Cinematography |
+| `elena.rostova@cursusaurus.dev` | Creator | Owns Editorial Typography, Engineering Monograph, Product Storytelling |
+| `marcus.thorne@cursusaurus.dev` | Creator | Owns Next.js Architecture, B2B Pricing, and the unpublished Distributed Consensus draft |
+
+If the email in `SEED_ADMIN_EMAIL` (defaults to `medini.ali.2000@gmail.com`) already exists in the database, seeding also grants it an active All-Access Pass.
 
 ---
 
-## 8. Available Scripts
+## Screens
+
+Screenshots show seeded fixture data.
+
+### Catalog and course detail
+
+Searchable catalog with category filters, and a course page that shows both pricing paths side by side: buy the course, or take the All-Access Pass.
+
+| ![Catalog course grid](public/demo/screenshots/01b-catalog-grid.png)<br>**Catalog grid:** published courses with category badges, prices and All-Access markers. | ![Course detail with dual pricing](public/demo/screenshots/02-course-detail-pricing.png)<br>**Course detail:** one-time price next to the All-Access Pass card ($15/mo after a 7-day trial). |
+| --- | --- |
+
+### Classroom
+
+Lesson player gated by `hasAccess()`. Progress is recorded automatically at 90% playback. Locked lessons point to the ways to unlock them instead of showing a disabled state.
+
+| ![Classroom video player](public/demo/screenshots/03-classroom-player.png)<br>**Classroom:** player, progress bar and a curriculum list with completion checkmarks. | ![Locked lesson overlay](public/demo/screenshots/04-classroom-locked-preview.png)<br>**Locked lesson:** overlay showing "Included in All-Access". Free-preview lessons remain playable. |
+| --- | --- |
+
+### Library and billing
+
+| ![Learner library](public/demo/screenshots/05-learner-library.png)<br>**Library:** the learner's courses with progress and All-Access / Purchased / Locked badges. | ![Billing page](public/demo/screenshots/08-billing-portal.png)<br>**Billing:** subscription status (active, trialing, past due), a link to the Stripe Customer Portal, and purchase records. |
+| --- | --- |
+
+### Creator studio
+
+Creators sequence lessons, mark free previews, upload lesson video and manage publication state.
+
+| ![Creator curriculum builder](public/demo/screenshots/06b-creator-curriculum.png)<br>**Curriculum studio:** lesson order, free-preview toggles and video upload status. | ![Creator dashboard](public/demo/screenshots/07-creator-dashboard.png)<br>**Dashboard:** the creator's courses with publication badges and lesson counts. |
+| --- | --- |
+
+### Sign-in and mobile
+
+![Login screen](public/demo/screenshots/11-login-screen.png)
+
+**Sign in:** Google and GitHub OAuth. Callback URLs are validated against open redirects.
+
+![Mobile catalog](public/demo/screenshots/09-mobile-catalog.png) ![Mobile course detail](public/demo/screenshots/10-mobile-course-detail.png)
+
+**Mobile:** single-column catalog and course detail, scrolling filter pills, stacked pricing cards.
+
+---
+
+## Architecture
+
+Guiding rule: **routes compose features; features contain business logic.**
+
+```
+cursusaurus/
+├── app/                    # Routing shell (layouts and page composition)
+│   ├── (marketplace)/      # Public catalog + course detail
+│   ├── (auth)/login/       # Google + GitHub OAuth sign-in
+│   ├── dashboard/courses/  # Creator studio
+│   ├── learn/[courseSlug]/[lessonSlug]/ # Classroom playback
+│   ├── library/            # Learner workspace
+│   ├── billing/            # Subscription status + Customer Portal link
+│   ├── checkout/success/   # Order polling page
+│   └── api/                # Route Handlers: auth, webhooks/stripe,
+│                           # order-status/[sessionId], video/signed-url
+├── features/               # Domain boundaries (queries, actions, validation)
+│   ├── courses/            # CRUD, slugs, publish state, readiness
+│   ├── purchases/          # One-time checkout, refund tombstones, queries
+│   ├── subscriptions/      # Subscription checkout, pricing, portal, queries
+│   ├── entitlements/       # hasAccess(), grant/revoke writers
+│   ├── stripe/             # Dispatcher, fulfillment context, dead-letter handling
+│   ├── video/              # Signed URLs, Supabase uploads, asset management
+│   └── progress/           # Lesson progress upserts, completion logic
+├── components/             # Presentation components
+│   └── ui/                 # shadcn/ui primitives
+├── lib/                    # Infrastructure (db/, stripe.ts, auth.ts, storage.ts)
+├── config/env.ts           # Environment variable validation
+└── proxy.ts                # Optimistic cookie-presence auth gate (not the security boundary)
+```
+
+Conventions:
+
+1. `app/` composes feature calls; database queries, Stripe API calls and price logic belong in `features/` or `lib/`.
+2. `features/` holds each domain's queries, Server Actions, Zod schemas and fulfillment writers.
+3. `components/ui/` primitives receive data through props and are not meant to import from `features/` or `app/`.
+4. Forms, checkout creation and portal sessions are Server Actions. Webhooks, polling and signed URLs are Route Handlers. `proxy.ts` is only an early gate; authoritative session checks run in layouts, actions and handlers.
+
+### Invariants
+
+**1. Entitlements are the only access authority.**
+`hasAccess(userId, courseId)` reads only from `entitlements`, never from `purchases` or `subscriptions`. `course_id = null` means all-access (from a subscription); a concrete `course_id` means a single course (from a purchase). Code: `features/entitlements/`.
+
+**2. Webhook fulfillment is transactional and idempotent.**
+Each Stripe webhook writes payment state and entitlements in one Postgres transaction. A unique constraint on `processed_stripe_events.event_id` turns duplicate deliveries into no-ops. A central dispatcher dead-letters malformed events instead of failing on them repeatedly. Code: `features/stripe/`, `app/api/webhooks/stripe`.
+
+**3. Subscription status maps directly to access.**
+`trialing` and `active` grant the all-access entitlement. `past_due`, `canceled` and `unpaid` revoke it, with no grace period. Cancelling or lapsing revokes only subscription-sourced rows, so a standalone purchase of the same course is left alone. Out-of-order events are rejected by comparing whole-second epochs (`last_event_epoch`), and completed purchases are immutable. Code: `features/subscriptions/`.
+
+**4. Refunds revoke access but keep progress.**
+A refund writes a `refund_tombstone` (keyed by `stripe_payment_intent_id`) for idempotency and revokes the purchase-sourced entitlement. It does not delete `lesson_progress`, so a repurchase resumes where the learner left off. Code: `features/purchases/`.
+
+**5. Missed webhooks have a fallback.**
+`/checkout/success` polls `GET /api/order-status/[sessionId]`, which is owner-verified and returns 404 on mismatch. If the webhook is delayed or missed, a single reconciliation attempt, claimed atomically via `reconcile_attempts`, recovers the session; it is designed not to grant twice. Code: `app/checkout/success/`, `app/api/order-status/`.
+
+**6. Video URLs are issued only after an access check.**
+Signed playback URLs are created server-side after `hasAccess()` passes: 60-second GET URLs from a private Supabase Storage bucket. The 50 MB per-lesson cap is enforced in app code (`features/video/types.ts`, `features/video/upload.ts`, mirrored in `scripts/seed.ts`) — mirror it on the bucket policy if you set explicit bucket limits. Free-preview lessons bypass the entitlement check entirely and need no login (`features/video/signed-url.ts`). Code: `features/video/`, `app/api/video/signed-url`.
+
+---
+
+## Tech stack
+
+| Layer | Technology | Used for |
+| --- | --- | --- |
+| Framework | Next.js (App Router) | Server Components, Server Actions, proxy auth gate |
+| UI | React | Server/client composition |
+| Database | Postgres (Neon in the example config) | All domain state |
+| ORM | Drizzle ORM | Typed SQL, single schema source, generated migrations |
+| Auth | Better Auth | Signed session cookies, Google + GitHub OAuth, test cookie minting |
+| Payments | Stripe | Hosted Checkout (one-time and subscription with trial), Customer Portal, signature-verified webhooks |
+| Storage | Supabase Storage | Private `course-videos` bucket, signed playback URLs |
+| Styling | Tailwind CSS v4 | Design tokens and shadcn mapping |
+| Components | shadcn/ui and Base UI | Accessible primitives restyled to the design system |
+| Testing | Vitest (PGlite) and Playwright | In-memory DB feature tests, browser E2E against a real DB |
+
+### Design
+
+The visual system is an editorial one: serif display type (Signifier), sans body text (Sohne), hairline borders and minimal shadows. Color carries meaning: blush peach marks access (All-Access badges, locked-content overlay, featured pricing tier), while progress and completion use ink black so the two never overlap. Tokens and component specs are in `docs/DESIGN.md`.
+
+---
+
+## Testing
+
+Feature tests run against an in-memory PGlite database using the real Drizzle migrations, so they need no external Postgres. E2E tests run against the running app with a real database.
+
+```
+# Unit and feature tests
+pnpm test
+
+# End-to-end browser tests
+pnpm test:e2e
+
+# Type-check, lint, UI audit (no raw button/input outside shadcn primitives)
+pnpm exec tsc --noEmit
+pnpm lint
+pnpm audit:ui
+```
+
+E2E prerequisites on a fresh clone: a real `DATABASE_URL` with migrations applied plus seeded fixture data (`pnpm seed`, unless a suite seeds its own), system Chrome (Playwright runs with `channel: "chrome"`, override via `PLAYWRIGHT_CHROME_PATH`), and Stripe/Supabase env vars (the config defaults `STRIPE_WEBHOOK_SECRET` to a local test value outside CI). The Playwright `webServer` builds and starts the app itself (`pnpm build && pnpm start`, reusing an already-running server locally).
+
+Coverage areas:
+
+- **Entitlements:** purchase only, subscription only, trialing, both at once, canceled with both, past due, refunded; duplicate grants; revocation isolation.
+- **Payments:** checkout validation, price integrity, trial-abuse prevention, refund tombstones, epoch-guarded subscription transitions, Customer Portal scoping, delayed / duplicate / out-of-order webhooks, reconciliation under concurrency.
+- **Content:** signed-URL issuance gated by `hasAccess()`, 60-second expiry, preview bypass, unpublished-course restriction, upload size limit, auto-completion at 90% playback, idempotent manual completion toggle.
+- **E2E flows:** auth and creator authorization, course create / edit / publish, catalog search, readiness checks, one-time purchase, trial, cancel and failed-renewal lifecycles, video upload and playback, progress and library consistency.
+
+---
+
+## Scripts
 
 | Script | Purpose |
-| :--- | :--- |
-| `pnpm dev` | Starts the Next.js 16 development server with hot-reloading |
-| `pnpm build` | Compiles the production application bundle |
-| `pnpm start` | Boots the optimized production server |
-| `pnpm lint` | Runs ESLint rules across all routes and features |
-| `pnpm test` | Executes the Vitest suite (221 tests, PGlite in-memory DB) |
-| `pnpm test:e2e` | Runs Playwright end-to-end flows (29 tests, real DB) |
-| `pnpm audit:ui` | Verifies no raw button/input leaks outside shadcn primitives |
-| `pnpm seed` / `pnpm seed:clean` | Populates (or resets + populates) fixture users, courses, entitlements |
-| `pnpm browse` | Opens an authenticated Chrome window as a seed user for visual checks |
-| `pnpm screenshots` | Regenerates the `public/demo/screenshots/` suite from the running app |
+| --- | --- |
+| `pnpm dev` | Start the development server |
+| `pnpm build` / `pnpm start` | Production build / production server |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest suite (PGlite) |
+| `pnpm test:e2e` | Playwright end-to-end tests (real DB) |
+| `pnpm audit:ui` | Check for raw button/input usage outside shadcn primitives |
+| `pnpm seed` / `pnpm seed:clean` | Seed fixture data (`seed:clean` resets first) |
+| `pnpm browse` | Open an authenticated Chrome window as a seed user |
+| `pnpm screenshots` | Regenerate `public/demo/screenshots/` from the running app (run `pnpm seed` first) |
+
+---
+
+## Scope and known limitations
+
+- No hosted demo. The project is documented for local development only.
+- Setup uses Stripe test-mode keys. Live-mode Stripe and production deployment are not documented here.
+- Running every flow requires accounts with a Postgres provider, Stripe, Supabase and at least one OAuth provider.
+- Sign-in is via Google or GitHub OAuth.
+- Subscription failure has no grace period: `past_due`, `canceled` and `unpaid` revoke all-access.
+- Missed-webhook recovery is a single reconciliation attempt per session.
+- Lesson video uploads have a 50 MB per-lesson cap, enforced in app code.
+- Screenshots use seeded fixture data.
 
 ---
 
 ## Documentation
 
-| Document | Purpose |
+| Document | Contents |
 | --- | --- |
-| `PRODUCT.md` | Product positioning, principles, and audience |
+| `PRODUCT.md` | Product positioning, principles and audience |
 | `docs/PRD.md` | Requirements, data model, invariants, resolved decisions |
-| `docs/ARCHITECTURE.md` | Project structure, system diagram, request lifecycles, security |
-| `docs/DESIGN.md` | Visual tokens, typography scale, component specs, responsive rules |
-| `docs/ROADMAP.md` | Phased task breakdown and current progress |
+| `docs/ARCHITECTURE.md` | Structure, system diagram, request lifecycles, security |
+| `docs/DESIGN.md` | Visual tokens, typography, component specs, responsive rules |
+| `docs/ROADMAP.md` | Phased task breakdown and progress |
 | `public/demo/screenshots/README.md` | Screenshot catalog and regeneration guide |
 
 ---
 
-<p align="center">
-  <sub>Designed & Built as an Editorial Prospectus. © 2026 Cursusaurus. All rights reserved.</sub>
-</p>
+© 2026 Cursusaurus. All rights reserved.
